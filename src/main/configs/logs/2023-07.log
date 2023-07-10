@@ -1,0 +1,20 @@
+[2023-07-09 15:41:25.291162: INFO - <class 'src.main.threads.ToolThread.ToolThread'>] Message code = 01, msg = Connected to socket server
+[2023-07-09 15:41:25.291162: INFO - <class 'src.main.threads.ToolThread.ToolThread'>] Message code = 02, msg = Sending msg to server: midNo = [OperationEnum.KEEP_ALIVE], msg = [55AA06030600E72E0D0A]
+[2023-07-09 15:41:25.322961: INFO - <class 'src.main.threads.ToolThread.ToolThread'>] Message code = 02, msg = Sending msg to server: midNo = [OperationEnum.LOCK_DEVICE], msg = [55AA070100020000000D0A]
+[2023-07-09 15:41:34.466616: INFO - <class 'src.main.threads.ToolThread.ToolThread'>] Message code = 02, msg = Sending msg to server: midNo = [OperationEnum.KEEP_ALIVE], msg = [55AA06030600E72E0D0A]
+[2023-07-09 15:41:58.024509: INFO - <class 'src.main.threads.ToolThread.ToolThread'>] Message code = 01, msg = Connected to socket server
+[2023-07-09 15:41:58.024509: INFO - <class 'src.main.threads.ToolThread.ToolThread'>] Message code = 02, msg = Sending msg to server: midNo = [OperationEnum.KEEP_ALIVE], msg = [55AA06030600E72E0D0A]
+[2023-07-09 15:41:58.054104: INFO - <class 'src.main.threads.ToolThread.ToolThread'>] Message code = 02, msg = Sending msg to server: midNo = [OperationEnum.LOCK_DEVICE], msg = [55AA070100020000000D0A]
+[2023-07-09 15:42:04.131544: INFO - <class 'src.main.threads.ToolThread.ToolThread'>] Message code = 02, msg = Sending msg to server: midNo = [OperationEnum.UNLOCK_DEVICE], msg = [55AA070100000000000D0A]
+[2023-07-09 15:42:08.371059: INFO - <class 'src.main.threads.ToolThread.ToolThread'>] Message code = 02, msg = Sending msg to server: midNo = [OperationEnum.SWITCH_PSET], msg = [55AA070205000562750D0A]
+[2023-07-09 15:42:15.088243: INFO - <class 'src.main.threads.ToolThread.ToolThread'>] Message code = 04, msg = Disconnected to socket server
+[2023-07-09 15:44:35.610698: INFO - <class 'src.main.threads.ToolThread.ToolThread'>] Message code = 01, msg = Connected to socket server
+[2023-07-09 15:44:35.611695: INFO - <class 'src.main.threads.ToolThread.ToolThread'>] Message code = 02, msg = Sending msg to server: midNo = [OperationEnum.KEEP_ALIVE], msg = [55AA06030600E72E0D0A]
+[2023-07-09 15:44:35.647775: INFO - <class 'src.main.threads.ToolThread.ToolThread'>] Message code = 02, msg = Sending msg to server: midNo = [OperationEnum.LOCK_DEVICE], msg = [55AA070100020000000D0A]
+[2023-07-09 15:44:38.688230: INFO - <class 'src.main.threads.ToolThread.ToolThread'>] Message code = 02, msg = Sending msg to server: midNo = [OperationEnum.SWITCH_PSET], msg = [55AA0702050003e2770D0A]
+[2023-07-09 15:44:41.753062: INFO - <class 'src.main.threads.ToolThread.ToolThread'>] Message code = 02, msg = Sending msg to server: midNo = [OperationEnum.UNLOCK_DEVICE], msg = [55AA070100000000000D0A]
+[2023-07-09 15:44:46.503365: INFO - <class 'src.main.threads.ToolThread.ToolThread'>] Message code = 04, msg = Disconnected to socket server
+[2023-07-09 15:51:37.245668: INFO - <class 'src.main.threads.ToolThread.ToolThread'>] Message code = 01, msg = Connected to socket server
+[2023-07-09 15:51:37.245668: INFO - <class 'src.main.threads.ToolThread.ToolThread'>] Message code = 02, msg = Sending msg to server: midNo = [OperationEnum.KEEP_ALIVE], msg = [55AA06030600E72E0D0A]
+[2023-07-09 15:51:37.275587: INFO - <class 'src.main.threads.ToolThread.ToolThread'>] Message code = 02, msg = Sending msg to server: midNo = [OperationEnum.LOCK_DEVICE], msg = [55AA070100020000000D0A]
+[2023-07-09 15:51:43.349263: INFO - <class 'src.main.threads.ToolThread.ToolThread'>] Message code = 02, msg = Sending msg to server: midNo = [OperationEnum.UNLOCK_DEVICE], msg = [55AA070100000000000D0A]

@@ -1,0 +1,3 @@
+application:
+  # None = default cwd path
+  file_path_parent: /configs/logs/
