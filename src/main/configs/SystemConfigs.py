@@ -12,6 +12,9 @@ PATH_FILE_LOG = [
     "configs/logs/"
 ]
 
+# logo图片存储路径
+PATH_LOGO_IMAGE = "configs/icons/logo.png"
+
 # 默认参数 - 颜色 - 系统背景颜色
 COLOR_SYSTEM_BACKGROUND = "#F0F0F0"
 
@@ -27,6 +30,13 @@ COLOR_CONTENT_PANEL_BACKGROUND = "#F0F0F0"
 
 # 默认参数 - 颜色 - 文本颜色_主题色
 COLOR_TEXT_THEME = "#E86C10"
+
+# 默认参数 - 颜色 - 按钮文本颜色
+COLOR_BUTTON_TEXT = "#FEFEFE"
+# 默认参数 - 颜色 - 按钮背景色
+COLOR_BUTTON_BACKGROUND = "#E86C10"
+# 默认参数 - 颜色 - 按钮按下的颜色
+COLOR_BUTTON_CLICKED = "#8D3C00"
 
 
 # 系统菜单列表

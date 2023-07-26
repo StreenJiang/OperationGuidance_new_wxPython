@@ -10,7 +10,6 @@ BUTTON_STYLE_VERTICAL = 2
 
 # 自定义图标文本开关按钮
 class CustomGenBitmapTextToggleButton(buttons.GenBitmapTextToggleButton):
-
     def __init__(self, parent, id = -1, bitmap = wx.NullBitmap, label = '',
                  pos = wx.DefaultPosition, size = wx.DefaultSize,
                  style = 0, validator = wx.DefaultValidator, custom_style = BUTTON_STYLE_HORIZONTAL,
@@ -22,7 +21,6 @@ class CustomGenBitmapTextToggleButton(buttons.GenBitmapTextToggleButton):
         self.SetBezelWidth(0)
         self.SetUseFocusIndicator(False)
         self.SetBackgroundColour(background_color)
-
 
     def DrawLabel(self, dc, width, height, dx = 0, dy = 0):
         bmp = self.bmpLabel
@@ -90,6 +88,93 @@ class CustomGenBitmapTextToggleButton(buttons.GenBitmapTextToggleButton):
                 pos_y = pos_y + (height / 50)  # extra spacing from bitmap
 
             dc.DrawText(label, (width - tw) / 2 + dx, pos_y + bh + dy)  # draw the text
+
+
+# 自定义圆角按钮
+class CustomRadiusButton(buttons.GenBitmapButton):
+    def __init__(self, parent, id = -1, label = "",
+                 font_color = "#FFFFFF", background_color = "#000000",
+                 clicked_color = "#000000", radius = 0,
+                 pos = wx.DefaultPosition, size = wx.DefaultSize,
+                 style = 0, validator = wx.DefaultValidator,
+                 name = "genbutton"):
+        buttons.GenBitmapButton.__init__(self, parent, id, None, pos, size, style, validator, name)
+        self.label = label
+        self.font_color = font_color
+        self.background_color = background_color
+        self.clicked_color = clicked_color
+        self.radius = radius
+
+        self.SetBezelWidth(0)
+        self.SetUseFocusIndicator(False)
+        self.SetBitmapLabel(self.createBitMap(label, font_color, background_color, radius))
+        self.SetBackgroundColour(self.GetParent().GetBackgroundColour())
+
+    def OnLeftDown(self, event):
+        self.SetBitmapLabel(self.createBitMap(self.label, self.font_color, self.clicked_color, self.radius))
+
+        # buttons.GenBitmapButton.OnLeftDown(self, event)
+        if (not self.IsEnabled()) or self.HasCapture():
+            return
+        # self.up = False
+        self.CaptureMouse()
+        self.SetFocus()
+        self.Refresh()
+        event.Skip()
+
+    def OnMotion(self, event):
+        pass
+
+
+    def OnLeftUp(self, event):
+        self.SetBitmapLabel(self.createBitMap(self.label, self.font_color, self.background_color, self.radius))
+        buttons.GenBitmapButton.OnLeftUp(self, event)
+
+    # 画bitmap
+    def createBitMap(self, label, font_color, background_color, radius):
+        width, height = self.GetSize() - (5, 5)
+        bitmap = wx.Bitmap(width, height, depth = 32)
+
+        dc = wx.MemoryDC(bitmap)
+        # 让背景全黑，方便后续设置透明色
+        dc.SetBackground(wx.Brush(wx.BLACK))
+        dc.Clear()
+
+        # 设置画笔、画刷的颜色
+        pen = wx.Pen(background_color, 1)
+        dc.SetPen(pen)
+        brush = wx.Brush(background_color)
+        dc.SetBrush(brush)
+
+        # 画出bitmap的形状
+        dc.DrawRoundedRectangle(0, 0, width, height, radius)
+
+        # Draw the text in the rounded rectangle
+        w, h = dc.GetSize()
+        dc.SetTextForeground(font_color)
+        font_temp = self.GetFont()
+        font_temp.SetWeight(wx.FONTWEIGHT_BOLD)
+        dc.SetFont(font_temp)
+        tw, th = dc.GetTextExtent(label)
+        dc.DrawText(label, (w - tw) // 2, (h - th) // 2)
+
+        # 删除DC
+        del dc
+
+        # 设置透明色
+        image = bitmap.ConvertToImage()
+        if not image.HasAlpha():
+            image.InitAlpha()
+        for y in range(image.GetHeight()):
+            for x in range(image.GetWidth()):
+                pix = wx.Colour(image.GetRed(x, y),
+                                image.GetGreen(x, y),
+                                image.GetBlue(x, y))
+                if pix == wx.BLACK:
+                    image.SetAlpha(x, y, 0)
+
+        # 画好了，返回
+        return image.ConvertToBitmap()
 
 
 # 自定义panel容器

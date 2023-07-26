@@ -103,6 +103,10 @@ class MainApp(wx.App):
             "COLOR_MENU_BUTTON_TOGGLE": COLOR_MENU_BUTTON_TOGGLE,               # 菜单按钮触发后的颜色
             "COLOR_CONTENT_PANEL_BACKGROUND": COLOR_CONTENT_PANEL_BACKGROUND,   # 内容主体界面的背景颜色
             "COLOR_TEXT_THEME": COLOR_TEXT_THEME,                               # 文本颜色_主题色
+
+            "COLOR_BUTTON_TEXT": COLOR_BUTTON_TEXT,                             # 默认参数 - 颜色 - 按钮文本颜色
+            "COLOR_BUTTON_BACKGROUND": COLOR_BUTTON_BACKGROUND,                 # 默认参数 - 颜色 - 按钮背景色
+            "COLOR_BUTTON_CLICKED": COLOR_BUTTON_CLICKED,                       # 默认参数 - 颜色 - 按钮按下的颜色
         }
 
 

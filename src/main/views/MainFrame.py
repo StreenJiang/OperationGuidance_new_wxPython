@@ -50,7 +50,7 @@ class MainFrame(wx.Frame):
         self.add_main_menus()
 
         # 添加logo
-        self.logo_img_png = wx.Image("configs/icons/logo.png")
+        self.logo_img_png = wx.Image(SystemConfigs.PATH_LOGO_IMAGE)
         logo_img_pos, logo_img_size = calculate_logo_img_size(self.main_menu_panel.GetSize(), self.logo_img_png.GetSize())
         self.logo_img_png.Rescale(logo_img_size[0], logo_img_size[1], wx.IMAGE_QUALITY_HIGH)
         self.logo_img_static = wx.StaticBitmap(self.main_menu_panel, -1, self.logo_img_png.ConvertToBitmap())
@@ -268,7 +268,7 @@ class MainFrame(wx.Frame):
         self.main_menu_panel.SetSize(main_menu_panel_size)
 
         # logo图片自适应调整大小和位置
-        self.logo_img_png = wx.Image("configs/icons/logo.png")
+        self.logo_img_png = wx.Image(SystemConfigs.PATH_LOGO_IMAGE)
         logo_img_pos, logo_img_size = calculate_logo_img_size(self.main_menu_panel.GetSize(),
                                                               self.logo_img_png.GetSize())
         self.logo_img_png.Rescale(logo_img_size[0], logo_img_size[1], wx.IMAGE_QUALITY_HIGH)

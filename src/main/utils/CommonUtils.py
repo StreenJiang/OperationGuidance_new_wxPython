@@ -8,14 +8,12 @@ class CommonUtil:
             raise Exception(error_msg)
 
 
-    # --------------------
     # 系统当前时间
-    # --------------------
     @staticmethod
     def System_Current_Datetime(format_str):
         try:
             value = datetime.datetime.now().strftime(format_str)
-        except Exception as e:
+        except Exception:
             value = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
         return value
 
