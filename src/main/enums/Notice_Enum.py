@@ -2,6 +2,8 @@ import datetime
 import encodings
 
 from enum import Enum, unique
+
+from src.main.configs.SystemConfigs import PATH_FILE_LOG
 from src.main.utils.CommonUtils import CommonUtil
 
 
@@ -63,7 +65,7 @@ class NoticeEnum(Enum):
 
 
     @staticmethod
-    def Log(cls, path, self, *args):
+    def Log(cls, self, *args):
         # cls(class) cannot be None, otherwise we can't trace the source
         CommonUtil.CheckNone(cls, "Argument [cls] cannot be None")
 
@@ -71,8 +73,8 @@ class NoticeEnum(Enum):
         msg = NoticeEnum.Print_Msg(cls, self, *args)
 
         # write the message into local(or remote) log file(s)
-        if path is not None and len(path) > 0:
-            for each in path:
+        if PATH_FILE_LOG is not None and len(PATH_FILE_LOG) > 0:
+            for each in PATH_FILE_LOG:
                 log_file = open(
                     each + datetime.datetime.now().strftime('%Y-%m') + u'.log',
                     'a+',

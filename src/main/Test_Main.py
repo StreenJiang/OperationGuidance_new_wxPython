@@ -4,9 +4,7 @@ from win32api import GetSystemMetrics
 from src.main.views.Test_Frame import MainProgram
 
 
-# ******************************
 # 主循环
-# ******************************
 if __name__ == '__main__':
     app_run = wx.App()
     a = [int(GetSystemMetrics(0) * 0.8), int(GetSystemMetrics(1) * 0.8)]

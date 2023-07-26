@@ -1,10 +1,4 @@
-import encodings
-import os
-import yaml
-
 from abc import ABC, abstractmethod
-
-from src.main.enums.Notice_Enum import NoticeEnum
 
 
 class ToolBaseEntity(ABC):
@@ -13,9 +7,6 @@ class ToolBaseEntity(ABC):
         self.__operation_commands = None
         self.__variables = None
         self.__log_path = None
-
-        self.initialize_log_path()
-
 
     # --------------------
     # 初始化命令清单
@@ -65,29 +56,3 @@ class ToolBaseEntity(ABC):
     @variables.setter
     def variables(self, variables):
         self.__variables = variables
-
-    # --------------------
-    # 初始化日志记录路径
-    # --------------------
-    def initialize_log_path(self):
-        file = None
-        # 获取当前系统所在路径
-        current_path = os.path.abspath("")
-        try:
-            # 获取ymal文件路径
-            yaml_path = os.path.join(current_path, "configs/application_dev.yml")
-            # 打开文件
-            file = open(yaml_path, 'r', encoding = encodings.utf_8.getregentry().name)
-            # 读取文件内容
-            yml_data = file.read()
-
-            # 转换为字典类型
-            yml_dict = yaml.full_load(yml_data)
-            self.__log_path = [current_path + yml_dict["application"]["file_path_parent"]]
-        except Exception as e:
-            self.__log_path = [current_path + "/"]
-            NoticeEnum.Log(self, None, NoticeEnum.APPLICATION_CONFIG_ERROR, str(e))
-        finally:
-            if file is not None:
-                file.close()
-

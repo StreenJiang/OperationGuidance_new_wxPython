@@ -89,7 +89,7 @@ class ToolThread(threading.Thread):
             self.connect_times += 1
             # 超过最高连接次数则 TODO: 后续需要做什么再优化
             if self.connect_times > self.connect_times_max:
-                NoticeEnum.Log(self, self.entity.log_path, NoticeEnum.RECONNECT_TOO_MANY_TIMES)
+                NoticeEnum.Log(self, NoticeEnum.RECONNECT_TOO_MANY_TIMES)
                 # TODO: 暂时先中断线程
                 self.stop()
                 return
@@ -102,7 +102,7 @@ class ToolThread(threading.Thread):
             self.entity.variables["socket"].connect((ip, port))
 
             self.entity.variables["connected"] = True
-            NoticeEnum.Log(self, self.entity.log_path, NoticeEnum.NETWORK_CONNECTED)
+            NoticeEnum.Log(self, NoticeEnum.NETWORK_CONNECTED)
         # 连接socket server失败
         except Exception as e:
             # 断开线程
@@ -117,15 +117,15 @@ class ToolThread(threading.Thread):
         if self.entity.variables["socket"] is not None:
             self.entity.variables["socket"].close()
             self.entity.variables["socket"] = None
-            NoticeEnum.Log(self, self.entity.log_path, NoticeEnum.NETWORK_DISCONNECTED)
+            NoticeEnum.Log(self, NoticeEnum.NETWORK_DISCONNECTED)
         else:
-            NoticeEnum.Log(self, self.entity.log_path, NoticeEnum.CONNECTION_ALREADY_CLOSED)
+            NoticeEnum.Log(self, NoticeEnum.CONNECTION_ALREADY_CLOSED)
 
         if error_msg is not None:
             if error_msg == "timed out":
-                NoticeEnum.Log(self, self.entity.log_path, NoticeEnum.CONNECT_TIME_OUT, self.timeout)
+                NoticeEnum.Log(self, NoticeEnum.CONNECT_TIME_OUT, self.timeout)
             else:
-                NoticeEnum.Log(self, self.entity.log_path, NoticeEnum.CONNECT_FAILED, error_msg)
+                NoticeEnum.Log(self, NoticeEnum.CONNECT_FAILED, error_msg)
 
         # 修改连接标志
         self.entity.variables['connected'] = False
@@ -164,7 +164,7 @@ class ToolThread(threading.Thread):
             # TODO: 这个判断条件对2取模不太理解，并且为什么‘countA’还需要乘以2，直接设置为2倍会有什么问题吗？
             if send_times % 2 == 1 and send_times <= self.entity.variables['countA'] * 2:
                 try:
-                    NoticeEnum.Log(self, self.entity.log_path, NoticeEnum.SEND_MSG_TO_SERVER, midNo, command_msg)
+                    NoticeEnum.Log(self, NoticeEnum.SEND_MSG_TO_SERVER, midNo, command_msg)
 
                     # 转换报文
                     message = binascii.a2b_hex(command_msg)
@@ -176,7 +176,7 @@ class ToolThread(threading.Thread):
                 # 发送数据失败
                 except Exception as e:
                     error_msg = str(e)
-                    NoticeEnum.Log(self, self.entity.log_path, NoticeEnum.SEND_MSG_FAILED, error_msg, command_msg)
+                    NoticeEnum.Log(self, NoticeEnum.SEND_MSG_FAILED, error_msg, command_msg)
                     
                     # 发送失败，断开连接
                     self.Disconnect_Network(error_msg)
@@ -206,10 +206,10 @@ class ToolThread(threading.Thread):
                 try:
                     self.Decode_received_message(received_message)
                 except Exception as e:
-                    NoticeEnum.Log(self, self.entity.log_path, NoticeEnum.DECODE_MSG_FAILED, str(e), received_message)
+                    NoticeEnum.Log(self, NoticeEnum.DECODE_MSG_FAILED, str(e), received_message)
             # 如果数据为空
             else:
-                NoticeEnum.Log(self, self.entity.log_path, NoticeEnum.READ_MSG_EMPTY, received_message)
+                NoticeEnum.Log(self, NoticeEnum.READ_MSG_EMPTY, received_message)
                 # 向命令队列加入心跳报文
                 self.entity.variables["commands"].append(
                     Command(command_type = CommandTypeEnum.OPERATION,
