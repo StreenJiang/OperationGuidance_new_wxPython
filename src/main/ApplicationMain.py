@@ -91,11 +91,9 @@ class MainApp(wx.App):
 
         # 实际上应该从配置文件内容中解析后返回给main app，现在先手写
         return {
-            # 主窗体初始大小
-            "SIZE_MAIN_FRAME_DEFAULT": SIZE_MAIN_FRAME_DEFAULT,
-            # 主窗体最小尺寸
-            "SIZE_MAIN_FRAME_MINIMUM": SIZE_MAIN_FRAME_MINIMUM,
-
+            # 系统参数
+            "SIZE_MAIN_FRAME_DEFAULT": SIZE_MAIN_FRAME_DEFAULT,                 # 主窗体初始大小
+            "SIZE_MAIN_FRAME_MINIMUM": SIZE_MAIN_FRAME_MINIMUM,                 # 主窗体最小尺寸
             # 所有颜色的配置
             "COLOR_SYSTEM_BACKGROUND": COLOR_SYSTEM_BACKGROUND,                 # 系统背景颜色
             "COLOR_MENU_BACKGROUND": COLOR_MENU_BACKGROUND,                     # 菜单栏的背景颜色
@@ -103,10 +101,9 @@ class MainApp(wx.App):
             "COLOR_MENU_BUTTON_TOGGLE": COLOR_MENU_BUTTON_TOGGLE,               # 菜单按钮触发后的颜色
             "COLOR_CONTENT_PANEL_BACKGROUND": COLOR_CONTENT_PANEL_BACKGROUND,   # 内容主体界面的背景颜色
             "COLOR_TEXT_THEME": COLOR_TEXT_THEME,                               # 文本颜色_主题色
-
-            "COLOR_BUTTON_TEXT": COLOR_BUTTON_TEXT,                             # 默认参数 - 颜色 - 按钮文本颜色
-            "COLOR_BUTTON_BACKGROUND": COLOR_BUTTON_BACKGROUND,                 # 默认参数 - 颜色 - 按钮背景色
-            "COLOR_BUTTON_CLICKED": COLOR_BUTTON_CLICKED,                       # 默认参数 - 颜色 - 按钮按下的颜色
+            "COLOR_BUTTON_TEXT": COLOR_BUTTON_TEXT,                             # 按钮文本颜色
+            "COLOR_BUTTON_BACKGROUND": COLOR_BUTTON_BACKGROUND,                 # 按钮背景色
+            "COLOR_BUTTON_CLICKED": COLOR_BUTTON_CLICKED,                       # 按钮按下的颜色
         }
 
 

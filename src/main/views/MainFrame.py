@@ -22,7 +22,7 @@ class MainFrame(wx.Frame):
         self.main_menus = []
 
         # 设置系统最底层背景颜色（这里按应该用一些本地配置文件里的参数，因为这些参数通过用户修改是可以持久化到本地的）
-        self.SetBackgroundColour(SystemConfigs.COLOR_SYSTEM_BACKGROUND)
+        self.SetBackgroundColour(self.sys_variables["sys_config"]["COLOR_SYSTEM_BACKGROUND"])
 
         # 给主窗口设置主布局sizer - 垂直线性布局
         #   共有2个子布局，分别是上方主菜单，下方主界面
@@ -34,7 +34,7 @@ class MainFrame(wx.Frame):
         # 主菜单panel
         main_menu_panel_pos, main_menu_panel_size = calculate_main_menu_panel_size(self.GetSize())
         self.main_menu_panel = wx.Panel(self.main_panel, wx.ID_ANY, pos = main_menu_panel_pos, size = main_menu_panel_size)
-        self.main_menu_panel.SetBackgroundColour(SystemConfigs.COLOR_MENU_BACKGROUND)
+        self.main_menu_panel.SetBackgroundColour(self.sys_variables["sys_config"]["COLOR_MENU_BACKGROUND"])
 
         # 窗体拖动逻辑
         self.main_menu_panel.mouse_pos = None # 初始化鼠标定位参数
@@ -75,33 +75,34 @@ class MainFrame(wx.Frame):
         for menu_config in SystemConfigs.main_menus_config:
             if menu_config["enabled"] and menu_config["id"] in self.sys_variables["license_data"]["MAIN_MENU_LIST"]:
                 main_menu_panel_pos, main_menu_panel_size = calculate_main_menu_button_size(self.GetSize(), index)
-                btn_temp = widgets.CustomGenBitmapTextToggleButton(
+                btn_temp = widgets.CustomMenuButton(
                     self.main_menu_panel,
                     wx.ID_ANY,
                     wx.Image(menu_config["icon"]).ConvertToBitmap(),
                     label = menu_config["name"],
+                    label_color = self.sys_variables["sys_config"]["COLOR_TEXT_THEME"],
                     custom_style = widgets.BUTTON_STYLE_VERTICAL,
-                    background_color = SystemConfigs.COLOR_MENU_BUTTON_BACKGROUND,
+                    background_color = self.sys_variables["sys_config"]["COLOR_MENU_BUTTON_BACKGROUND"],
                     pos = main_menu_panel_pos,
                     size = main_menu_panel_size
                 )
 
                 # 绑定事件
-                btn_temp.Bind(wx.EVT_BUTTON, self.main_menu_toggled)
+                btn_temp.Bind(wx.EVT_LEFT_DOWN, self.main_menu_toggled)
                 btn_temp.Bind(wx.EVT_MOUSE_EVENTS, self.window_dragging)
                 btn_temp.Bind(wx.EVT_LEFT_DOWN, self.window_dragging_mouse_l_down)
                 btn_temp.Bind(wx.EVT_LEFT_UP, self.window_dragging_mouse_l_up)
 
                 # 将后续需要用的配置信息存到对象上
-                btn_temp.bgColor = SystemConfigs.COLOR_MENU_BUTTON_BACKGROUND
-                btn_temp.toggledColor = SystemConfigs.COLOR_MENU_BUTTON_TOGGLE
+                btn_temp.bgColor = self.sys_variables["sys_config"]["COLOR_MENU_BUTTON_BACKGROUND"]
+                btn_temp.toggledColor = self.sys_variables["sys_config"]["COLOR_MENU_BUTTON_TOGGLE"]
                 btn_temp.events = menu_config["events"]
                 btn_temp.childrenMenus = menu_config["children"]
 
                 # 将每个菜单的内容页容器绑定到菜单按钮上
                 content_panel_pos, content_panel_size = calculate_content_panel_size(self.GetSize(), len(btn_temp.childrenMenus) > 0)
                 btn_temp.content_panel = wx.Panel(self.main_panel, wx.ID_ANY, pos = content_panel_pos, size = content_panel_size)
-                btn_temp.content_panel.SetBackgroundColour(SystemConfigs.COLOR_CONTENT_PANEL_BACKGROUND)
+                btn_temp.content_panel.SetBackgroundColour(self.sys_variables["sys_config"]["COLOR_CONTENT_PANEL_BACKGROUND"])
 
                 # 初始化子菜单
                 btn_temp.child_menu_panel = None
@@ -144,29 +145,30 @@ class MainFrame(wx.Frame):
             child_menu_panel = wx.Panel(self.main_panel, wx.ID_ANY, pos = child_menu_panel_pos, size = child_menu_panel_size)
             main_menu_btn.child_menu_panel = child_menu_panel
             main_menu_btn.child_menu_panel.Show(False)
-            main_menu_btn.child_menu_panel.SetBackgroundColour(SystemConfigs.COLOR_MENU_BACKGROUND)
+            main_menu_btn.child_menu_panel.SetBackgroundColour(self.sys_variables["sys_config"]["COLOR_MENU_BACKGROUND"])
 
             # 遍历所有子菜单的配置
             for index_2 in range(len(child_menus_arr)):
                 child_menu = child_menus_arr[index_2]
                 child_btn_temp_pos, child_btn_temp_size = calculate_child_menu_button_size(self.GetSize(), index_2)
-                child_btn_temp = widgets.CustomGenBitmapTextToggleButton(
+                child_btn_temp = widgets.CustomMenuButton(
                     child_menu_panel,
                     wx.ID_ANY,
                     wx.Image(child_menu["icon"]).ConvertToBitmap(),
                     label = child_menu["name"],
+                    label_color = self.sys_variables["sys_config"]["COLOR_TEXT_THEME"],
                     custom_style = widgets.BUTTON_STYLE_HORIZONTAL,
-                    background_color = SystemConfigs.COLOR_MENU_BUTTON_BACKGROUND,
+                    background_color = self.sys_variables["sys_config"]["COLOR_MENU_BUTTON_BACKGROUND"],
                     pos = child_btn_temp_pos,
                     size = child_btn_temp_size
                 )
 
                 # 绑定事件
-                child_btn_temp.Bind(wx.EVT_BUTTON, self.child_menu_toggled)
+                child_btn_temp.Bind(wx.EVT_LEFT_DOWN, self.child_menu_toggled)
 
                 # 将后续需要用的配置信息存到对象上
-                child_btn_temp.bgColor = SystemConfigs.COLOR_MENU_BUTTON_BACKGROUND
-                child_btn_temp.toggledColor = SystemConfigs.COLOR_MENU_BUTTON_TOGGLE
+                child_btn_temp.bgColor = self.sys_variables["sys_config"]["COLOR_MENU_BUTTON_BACKGROUND"]
+                child_btn_temp.toggledColor = self.sys_variables["sys_config"]["COLOR_MENU_BUTTON_TOGGLE"]
                 child_btn_temp.events = child_menu["events"]
 
                 # 将按钮对象加入到list中以方便后续操作
@@ -280,36 +282,35 @@ class MainFrame(wx.Frame):
 
         # 主菜单panel中的所有按钮也要跟着改
         for main_menu in self.main_menu_panel.GetChildren():
-            if isinstance(main_menu, widgets.CustomGenBitmapTextToggleButton):
+            if isinstance(main_menu, widgets.CustomMenuButton):
                 index = self.main_menus.index(main_menu)
                 main_menu_button_pos, main_menu_button_size = calculate_main_menu_button_size(self.GetSize(), index)
-                # 更改按钮的位置
-                main_menu.SetPosition(main_menu_button_pos)
                 # 更改按钮的大小
                 main_menu.SetSize(main_menu_button_size)
+                # 更改按钮的位置
+                main_menu.SetPosition(main_menu_button_pos)
 
                 # 调整每个主菜单下的内容panel的size和位置
                 content_panel_pos, content_panel_size = calculate_content_panel_size(self.GetSize(),
                                                                                      main_menu.child_menu_panel is not None)
-                main_menu.content_panel.SetPosition(content_panel_pos)
                 main_menu.content_panel.SetSize(content_panel_size)
+                main_menu.content_panel.SetPosition(content_panel_pos)
                 main_menu.content_panel.Refresh()
 
                 if main_menu.child_menu_panel is not None:
                     child_menu_panel_pos, child_menu_panel_size = calculate_child_menu_panel_size(self.GetSize())
-                    main_menu.child_menu_panel.SetPosition(child_menu_panel_pos)
                     main_menu.child_menu_panel.SetSize(child_menu_panel_size)
+                    main_menu.child_menu_panel.SetPosition(child_menu_panel_pos)
 
                     # 子菜单panel中的所有按钮也要跟着改
                     for child_menu in main_menu.child_menu_panel.GetChildren():
-                        if isinstance(child_menu, widgets.CustomGenBitmapTextToggleButton):
+                        if isinstance(child_menu, widgets.CustomMenuButton):
                             index = main_menu.child_menus.index(child_menu)
-                            child_btn_temp_pos, child_btn_temp_size = calculate_child_menu_button_size(self.GetSize(),
-                                                                                                       index)
-                            # 更改按钮的位置
-                            child_menu.SetPosition(child_btn_temp_pos)
+                            child_btn_temp_pos, child_btn_temp_size = calculate_child_menu_button_size(self.GetSize(), index)
                             # 更改按钮的大小
                             child_menu.SetSize(child_btn_temp_size)
+                            # 更改按钮的位置
+                            child_menu.SetPosition(child_btn_temp_pos)
 
                     # 刷新子菜单panel
                     main_menu.child_menu_panel.Refresh()

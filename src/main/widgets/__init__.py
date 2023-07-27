@@ -11,11 +11,12 @@ BUTTON_STYLE_VERTICAL = 2
 # 自定义图标文本开关按钮
 class CustomGenBitmapTextToggleButton(buttons.GenBitmapTextToggleButton):
     def __init__(self, parent, id = -1, bitmap = wx.NullBitmap, label = '',
-                 pos = wx.DefaultPosition, size = wx.DefaultSize,
+                 label_color = "#FFFFFF", pos = wx.DefaultPosition, size = wx.DefaultSize,
                  style = 0, validator = wx.DefaultValidator, custom_style = BUTTON_STYLE_HORIZONTAL,
                  background_color = "#000000",
                  name = "CustomGenBitmapTextToggleButton"):
         buttons.GenBitmapButton.__init__(self, parent, id, bitmap, pos, size, style, validator, name)
+        self.label_color = label_color
         self.SetLabel(label)
         self.custom_style = custom_style
         self.SetBezelWidth(0)
@@ -56,14 +57,14 @@ class CustomGenBitmapTextToggleButton(buttons.GenBitmapTextToggleButton):
             font_temp.SetWeight(wx.FONTWEIGHT_BOLD)
             font_temp.SetPointSize(int(width / 50) + int(height / 10) + 3)
             dc.SetFont(font_temp)
-            dc.SetTextForeground(COLOR_TEXT_THEME)
+            dc.SetTextForeground(self.label_color)
 
             label = self.GetLabel()
             tw, th = dc.GetTextExtent(label)  # size of text
             if not self.up:
                 dx = dy = self.labelDelta
 
-            pos_x = width / 10  # adjust for bitmap and text to centre
+            pos_x = width / 15  # adjust for bitmap and text to centre
             if bmp is not None:
                 dc.DrawBitmap(bmp, pos_x, (height - bh - (bh / 100 * 10)) / 2 + dy, hasMask)  # draw bitmap if available
                 pos_x = pos_x + (width / 20)  # extra spacing from bitmap
@@ -75,7 +76,7 @@ class CustomGenBitmapTextToggleButton(buttons.GenBitmapTextToggleButton):
             font_temp.SetWeight(wx.FONTWEIGHT_BOLD)
             font_temp.SetPointSize(int(height / 10) + 1)
             dc.SetFont(font_temp)
-            dc.SetTextForeground(COLOR_TEXT_THEME)
+            dc.SetTextForeground(self.label_color)
 
             label = self.GetLabel()
             tw, th = dc.GetTextExtent(label)  # size of text
@@ -88,6 +89,78 @@ class CustomGenBitmapTextToggleButton(buttons.GenBitmapTextToggleButton):
                 pos_y = pos_y + (height / 50)  # extra spacing from bitmap
 
             dc.DrawText(label, (width - tw) / 2 + dx, pos_y + bh + dy)  # draw the text
+
+    # 重写绘制方法
+    def OnPaint(self, event):
+        (width, height) = self.GetClientSize()
+        x1 = y1 = 0
+        x2 = width - 1
+        y2 = height - 1
+        dc = wx.PaintDC(self)
+        brush = self.GetBackgroundBrush(dc)
+
+        # 这里加了一行代码：让背景画刷跟背景颜色一致（不知道为啥这个颜色默认是不一样的）
+        brush.SetColour(self.GetBackgroundColour())
+
+        if brush is not None:
+            dc.SetBackground(brush)
+            dc.Clear()
+        self.DrawBezel(dc, x1, y1, x2, y2)
+        self.DrawLabel(dc, width, height)
+        if self.hasFocus and self.useFocusInd:
+            self.DrawFocusIndicator(dc, width, height)
+
+
+# 自定义菜单按钮（用panel模拟按钮，以实现子菜单的左侧选中效果）
+class CustomMenuButton(wx.Panel):
+    def __init__(self, parent, id = -1, bitmap = wx.NullBitmap, label = '',
+                 label_color = "#FFFFFF", pos = wx.DefaultPosition, size = wx.DefaultSize,
+                 style = 0, validator = wx.DefaultValidator, custom_style = BUTTON_STYLE_HORIZONTAL,
+                 background_color = "#000000",
+                 name = "CustomGenBitmapTextToggleButton"):
+        wx.Panel.__init__(self, parent, id, pos = pos, size = size)
+        self.button = CustomGenBitmapTextToggleButton(parent, id, bitmap, label, label_color, pos, size, style,
+                                                      validator, custom_style, background_color, name)
+
+    # 重写SetBackgroundColour方法，以达到给panel和按钮分别着色的目的
+    def SetBackgroundColour(self, colour):
+        if self.button.custom_style == BUTTON_STYLE_HORIZONTAL:
+            if self.button.GetToggle():
+                super().SetBackgroundColour(self.button.label_color)
+            else:
+                super().SetBackgroundColour(colour)
+
+        self.button.SetBackgroundColour(colour)
+        self.Refresh()
+
+    # 新建SetToggle，因为panel没有这个方法，实现调用按钮的SetToggle方法
+    def SetToggle(self, flag):
+        self.button.SetToggle(flag)
+
+    # 重写SetSize方法，以达到给panel和按钮分别设置size的目的
+    def SetSize(self, *args):
+        width, height = (0, 0)
+
+        if len(args) == 1:
+            width, height = args[0][0], args[0][1]
+        elif len(args) == 2:
+            width, height = args
+
+        super().SetSize(width, height)
+
+        if self.button.custom_style == BUTTON_STYLE_HORIZONTAL:
+            width, height = (width - width * 0.05, height)
+
+        self.button.SetSize(width, height)
+
+    # 重写SetPosition方法，以达到给panel和按钮分别设置position的目的
+    def SetPosition(self, pt):
+        super().SetPosition(pt)
+
+        if self.button.custom_style == BUTTON_STYLE_HORIZONTAL:
+            pt = (pt[0] + self.GetSize()[0] - self.button.GetSize()[0], pt[1])
+
+        self.button.SetPosition(pt)
 
 
 # 自定义圆角按钮
