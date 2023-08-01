@@ -1,9 +1,15 @@
-from src.main.enums.Notice_Enum import NoticeEnum
-
 
 class ArgumentTypeException(Exception):
-    def __init__(self, argument, error_msg):
+    def __init__(self, error_msg):
         Exception.__init__(self, error_msg)
-        NoticeEnum.Log(self, NoticeEnum.ARGUMENT_ERROR, argument)
 
+class LengthTooLongException(Exception):
+    def __init__(self, error_msg):
+        Exception.__init__(self, error_msg)
+        # TODO: should have a log here
+
+class CustomListException(Exception):
+    def __init__(self, element, clazz):
+        Exception.__init__(self, "Element[%s] type error, each element should be [%s]" %
+                           (element, clazz))
 

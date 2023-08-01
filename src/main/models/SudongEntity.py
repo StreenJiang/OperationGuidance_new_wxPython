@@ -1,7 +1,7 @@
 from src.main.enums.Command_Type_Enum import CommandTypeEnum
 from src.main.enums.Operation_Enum import OperationEnum
 from src.main.models.Command import Command
-from src.main.models.base.base import ToolBaseEntity
+from src.main.models.base import ToolBaseEntity
 
 
 class SudongEntity(ToolBaseEntity):

@@ -7,7 +7,7 @@ from src.main.enums.Command_Type_Enum import CommandTypeEnum
 from src.main.enums.Notice_Enum import NoticeEnum
 from src.main.enums.Operation_Enum import OperationEnum
 from src.main.models.Command import Command
-from src.main.utils.CommonUtils import CommonUtil
+import src.main.utils.CommonUtils as CommonUtils
 
 
 # --------------------
@@ -350,7 +350,7 @@ class ToolThread(threading.Thread):
             identify = self.entity.variables['identify']
 
             # 34-拧紧数据/=时间戳据
-            timeStamp = CommonUtil.System_Current_Datetime('%Y%m%d%H%M%S')
+            timeStamp = CommonUtils.System_Current_Datetime('%Y%m%d%H%M%S')
 
             # 35-拧紧数据/=拧紧Id
             idStamp = '0000000000'

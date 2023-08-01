@@ -2,7 +2,7 @@ import wx
 import win32api as win32
 from wx import Object
 
-from src.main.configs.SystemConfigs import *
+import src.main.configs as configs
 from src.main.views.MainFrame import MainFrame
 
 
@@ -19,8 +19,9 @@ class MainApp(wx.App):
         # 2. 初始化系统参数
         variables = {
             "license_data": self.Analyse_license(),         # 解析许可证
-            "sys_config": self.Initialize_system_config(),  # 初始化系统配置
         }
+        # 初始化保存在磁盘中的系统参数
+        self.Initialize_system_config()
 
         # 3. 开始画界面
         self.frame = MainFrame(parent = None, id = wx.ID_ANY, variables = variables)
@@ -88,23 +89,8 @@ class MainApp(wx.App):
 
     # 初始化系统参数
     def Initialize_system_config(self):
-
-        # 实际上应该从配置文件内容中解析后返回给main app，现在先手写
-        return {
-            # 系统参数
-            "SIZE_MAIN_FRAME_DEFAULT": SIZE_MAIN_FRAME_DEFAULT,                 # 主窗体初始大小
-            "SIZE_MAIN_FRAME_MINIMUM": SIZE_MAIN_FRAME_MINIMUM,                 # 主窗体最小尺寸
-            # 所有颜色的配置
-            "COLOR_SYSTEM_BACKGROUND": COLOR_SYSTEM_BACKGROUND,                 # 系统背景颜色
-            "COLOR_MENU_BACKGROUND": COLOR_MENU_BACKGROUND,                     # 菜单栏的背景颜色
-            "COLOR_MENU_BUTTON_BACKGROUND": COLOR_MENU_BUTTON_BACKGROUND,       # 菜单按钮的背景颜色
-            "COLOR_MENU_BUTTON_TOGGLE": COLOR_MENU_BUTTON_TOGGLE,               # 菜单按钮触发后的颜色
-            "COLOR_CONTENT_PANEL_BACKGROUND": COLOR_CONTENT_PANEL_BACKGROUND,   # 内容主体界面的背景颜色
-            "COLOR_TEXT_THEME": COLOR_TEXT_THEME,                               # 文本颜色_主题色
-            "COLOR_BUTTON_TEXT": COLOR_BUTTON_TEXT,                             # 按钮文本颜色
-            "COLOR_BUTTON_BACKGROUND": COLOR_BUTTON_BACKGROUND,                 # 按钮背景色
-            "COLOR_BUTTON_CLICKED": COLOR_BUTTON_CLICKED,                       # 按钮按下的颜色
-        }
+        # 从存储在磁盘中的系统参数文件中读取数据，然后修改软件默认的系统参数
+        pass
 
 
 if __name__ == '__main__':

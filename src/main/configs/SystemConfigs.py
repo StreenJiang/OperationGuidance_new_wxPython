@@ -1,71 +1,37 @@
 import wx
 
 from src.main.controllers import apis, call_backs
-
-# 主窗体初始大小
-SIZE_MAIN_FRAME_DEFAULT = (800, 600)
-# 主窗体最小尺寸
-SIZE_MAIN_FRAME_MINIMUM = (400, 300)
-
-# 日志文件存储路径（以数组形式设置，以防以后有多个地方需要存储）
-PATH_FILE_LOG = [
-    "configs/logs/"
-]
-
-# logo图片存储路径
-PATH_LOGO_IMAGE = "configs/icons/logo.png"
-
-# 默认参数 - 颜色 - 系统背景颜色
-COLOR_SYSTEM_BACKGROUND = "#F0F0F0"
-
-# 默认参数 - 颜色 - 菜单栏的背景颜色
-COLOR_MENU_BACKGROUND = "#3F3F3F"
-# 默认参数 - 颜色 - 菜单按钮的背景颜色
-COLOR_MENU_BUTTON_BACKGROUND = "#3F3F3F"
-# 默认参数 - 颜色 - 菜单按钮触发后的颜色
-COLOR_MENU_BUTTON_TOGGLE = "#F0F0F0"
-
-# 默认参数 - 颜色 - 内容主体界面的背景颜色
-COLOR_CONTENT_PANEL_BACKGROUND = "#F0F0F0"
-
-# 默认参数 - 颜色 - 文本颜色_主题色
-COLOR_TEXT_THEME = "#E86C10"
-
-# 默认参数 - 颜色 - 按钮文本颜色
-COLOR_BUTTON_TEXT = "#FEFEFE"
-# 默认参数 - 颜色 - 按钮背景色
-COLOR_BUTTON_BACKGROUND = "#E86C10"
-# 默认参数 - 颜色 - 按钮按下的颜色
-COLOR_BUTTON_CLICKED = "#8D3C00"
-
+from src.main.views.Content_Workplace import ContentWorkplace
 
 # 系统菜单列表
 main_menus_config = [
     {
-        "id": "00001", # 菜单ID，用于许可证识别（不可重复；00000代表默认enabled，不需要配置）
-        "name": "用户操作", # 菜单名称
-        "icon": "configs/icons/user_operation.png", # 菜单icon路径
-        "enabled": True, # 菜单是否激活（根据许可证）
+        "id": "00001",                                          # 菜单ID，用于许可证识别（不可重复；00000代表默认enabled，不需要配置）
+        "name": "用户操作",                                       # 菜单名称
+        "icon": "configs/icons/user_operation.png",             # 菜单icon路径
+        "view": None,                                           # 菜单所代表的视图（如果=None，则看子菜单的View；如果所有子菜单也没有视图，就代表是一个功能性按钮。比如退出按钮）
+        "enabled": True,                                        # 菜单是否激活（根据许可证）
         "events": {
-            wx.EVT_BUTTON: [
+            wx.EVT_LEFT_DOWN: [
                 {
                     "api": apis.API_EVT_BUTTON_TEST,
                     "call_back": call_backs.CALL_BACK_TEST
                 },
             ],
-            wx.EVT_MOUSE_EVENTS: [
+            wx.EVT_MOTION: [
                 {
                     "api": apis.API_EVT_MOUSE_EVENTS_TEST,
                     "call_back": None
                 },
             ],
         },
-        "children": [ # 子菜单
+        "children": [                                               # 子菜单
             {
-                "name": "手动操作工具",
+                "name": "手动操作",
                 "icon": "configs/icons/manual_manipulate_tool.png",
+                "view": wx.Panel,
                 "events": {
-                    wx.EVT_BUTTON: [
+                    wx.EVT_LEFT_DOWN: [
                         {
                             "api": apis.API_EVT_BUTTON_TEST,
                             "call_back": call_backs.CALL_BACK_TEST
@@ -75,8 +41,9 @@ main_menus_config = [
             }, {
                 "name": "手动控制",
                 "icon": "configs/icons/manual_control.png",
+                "view": wx.Panel,
                 "events": {
-                    wx.EVT_BUTTON: [
+                    wx.EVT_LEFT_DOWN: [
                         {
                             "api": apis.API_EVT_BUTTON_TEST,
                             "call_back": call_backs.CALL_BACK_TEST
@@ -87,11 +54,12 @@ main_menus_config = [
         ]
     }, {
         "id": "00002",
-        "name": "产品管理",
-        "icon": "configs/icons/product_management.png",
+        "name": "任务管理",
+        "icon": "configs/icons/mission_management.png",
+        "view": wx.Panel,
         "enabled": True,
         "events": {
-            wx.EVT_BUTTON: [
+            wx.EVT_LEFT_DOWN: [
                 {
                     "api": apis.API_EVT_BUTTON_TEST,
                     "call_back": call_backs.CALL_BACK_TEST
@@ -103,12 +71,13 @@ main_menus_config = [
         "id": "00003",
         "name": "工作台",
         "icon": "configs/icons/workplace.png",
+        "view": ContentWorkplace,
         "enabled": True,
         "events": {
-            wx.EVT_BUTTON: [
+            wx.EVT_LEFT_DOWN: [
                 {
-                    "api": apis.API_EVT_BUTTON_TEST,
-                    "call_back": call_backs.CALL_BACK_TEST
+                    "api": apis.API_GET_PRODUCT_MISSIONS,
+                    "call_back": call_backs.CALL_BACK_SHOW_PRODUCT_MISSIONS
                 },
             ],
         },
@@ -117,9 +86,10 @@ main_menus_config = [
         "id": "00004",
         "name": "数据查询",
         "icon": "configs/icons/data_query.png",
+        "view": wx.Panel,
         "enabled": True,
         "events": {
-            wx.EVT_BUTTON: [
+            wx.EVT_LEFT_DOWN: [
                 {
                     "api": apis.API_EVT_BUTTON_TEST,
                     "call_back": call_backs.CALL_BACK_TEST
@@ -131,9 +101,10 @@ main_menus_config = [
         "id": "00005",
         "name": "事件日志",
         "icon": "configs/icons/event_log.png",
+        "view": wx.Panel,
         "enabled": True,
         "events": {
-            wx.EVT_BUTTON: [
+            wx.EVT_LEFT_DOWN: [
                 {
                     "api": apis.API_EVT_BUTTON_TEST,
                     "call_back": call_backs.CALL_BACK_TEST
@@ -145,9 +116,10 @@ main_menus_config = [
         "id": "00006",
         "name": "参数配置",
         "icon": "configs/icons/variable_settings.png",
+        "view": None,
         "enabled": True,
         "events": {
-            wx.EVT_BUTTON: [
+            wx.EVT_LEFT_DOWN: [
                 {
                     "api": apis.API_EVT_BUTTON_TEST,
                     "call_back": call_backs.CALL_BACK_TEST
@@ -158,8 +130,9 @@ main_menus_config = [
             {
                 "name": "账户管理",
                 "icon": "configs/icons/user_info.png",
+                "view": wx.Panel,
                 "events": {
-                    wx.EVT_BUTTON: [
+                    wx.EVT_LEFT_DOWN: [
                         {
                             "api": apis.API_EVT_BUTTON_TEST,
                             "call_back": call_backs.CALL_BACK_TEST
@@ -169,8 +142,9 @@ main_menus_config = [
             }, {
                 "name": "站点配置",
                 "icon": "configs/icons/station_settings.png",
+                "view": wx.Panel,
                 "events": {
-                    wx.EVT_BUTTON: [
+                    wx.EVT_LEFT_DOWN: [
                         {
                             "api": apis.API_EVT_BUTTON_TEST,
                             "call_back": call_backs.CALL_BACK_TEST
@@ -180,8 +154,9 @@ main_menus_config = [
             }, {
                 "name": "通讯设备",
                 "icon": "configs/icons/communication_device.png",
+                "view": wx.Panel,
                 "events": {
-                    wx.EVT_BUTTON: [
+                    wx.EVT_LEFT_DOWN: [
                         {
                             "api": apis.API_EVT_BUTTON_TEST,
                             "call_back": call_backs.CALL_BACK_TEST
@@ -191,8 +166,9 @@ main_menus_config = [
             }, {
                 "name": "串口设备",
                 "icon": "configs/icons/serial_port_device.png",
+                "view": wx.Panel,
                 "events": {
-                    wx.EVT_BUTTON: [
+                    wx.EVT_LEFT_DOWN: [
                         {
                             "api": apis.API_EVT_BUTTON_TEST,
                             "call_back": call_backs.CALL_BACK_TEST
@@ -202,8 +178,9 @@ main_menus_config = [
             }, {
                 "name": "存储参数",
                 "icon": "configs/icons/store_variables.png",
+                "view": wx.Panel,
                 "events": {
-                    wx.EVT_BUTTON: [
+                    wx.EVT_LEFT_DOWN: [
                         {
                             "api": apis.API_EVT_BUTTON_TEST,
                             "call_back": call_backs.CALL_BACK_TEST
@@ -213,8 +190,9 @@ main_menus_config = [
             }, {
                 "name": "开发者选项",
                 "icon": "configs/icons/developer_choices.png",
+                "view": wx.Panel,
                 "events": {
-                    wx.EVT_BUTTON: [
+                    wx.EVT_LEFT_DOWN: [
                         {
                             "api": apis.API_EVT_BUTTON_TEST,
                             "call_back": call_backs.CALL_BACK_TEST
@@ -224,8 +202,9 @@ main_menus_config = [
             }, {
                 "name": "软件许可",
                 "icon": "configs/icons/software_license.png",
+                "view": wx.Panel,
                 "events": {
-                    wx.EVT_BUTTON: [
+                    wx.EVT_LEFT_DOWN: [
                         {
                             "api": apis.API_EVT_BUTTON_TEST,
                             "call_back": call_backs.CALL_BACK_TEST
@@ -242,9 +221,10 @@ main_menus_config = [
         "id": "00007",
         "name": "用户信息",
         "icon": "configs/icons/user_info.png",
+        "view": wx.Panel,
         "enabled": True,
         "events": {
-            wx.EVT_BUTTON: [
+            wx.EVT_LEFT_DOWN: [
                 {
                     "api": apis.API_EVT_BUTTON_TEST,
                     "call_back": call_backs.CALL_BACK_TEST
@@ -256,11 +236,12 @@ main_menus_config = [
         "id": "00000",
         "name": "退出",
         "icon": "configs/icons/exit.png",
+        "view": None,
         "enabled": True,
         "events": {
-            wx.EVT_BUTTON: [
+            wx.EVT_LEFT_UP: [
                 {
-                    "api": apis.API_EVT_BUTTON_TEST,
+                    "api": apis.exit_confirmation,
                     "call_back": None
                 },
             ],

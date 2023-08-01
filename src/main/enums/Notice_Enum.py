@@ -3,8 +3,8 @@ import encodings
 
 from enum import Enum, unique
 
-from src.main.configs.SystemConfigs import PATH_FILE_LOG
-from src.main.utils.CommonUtils import CommonUtil
+import src.main.configs as configs
+import src.main.utils.CommonUtils as CommonUtils
 
 
 @unique
@@ -42,7 +42,7 @@ class NoticeEnum(Enum):
     @staticmethod
     def Print_Msg(cls, self, *args):
         # cls(class) cannot be None, otherwise we can't trace the source
-        CommonUtil.CheckNone(cls, "Argument [cls] cannot be None")
+        CommonUtils.CheckNone(cls, "Argument [cls] cannot be None")
 
         # fill all the args into msg
         msg = self.value["MSG"] % args
@@ -67,14 +67,14 @@ class NoticeEnum(Enum):
     @staticmethod
     def Log(cls, self, *args):
         # cls(class) cannot be None, otherwise we can't trace the source
-        CommonUtil.CheckNone(cls, "Argument [cls] cannot be None")
+        CommonUtils.CheckNone(cls, "Argument [cls] cannot be None")
 
         # get complete message and print it
         msg = NoticeEnum.Print_Msg(cls, self, *args)
 
         # write the message into local(or remote) log file(s)
-        if PATH_FILE_LOG is not None and len(PATH_FILE_LOG) > 0:
-            for each in PATH_FILE_LOG:
+        if configs.PATH_FILE_LOG is not None and len(configs.PATH_FILE_LOG) > 0:
+            for each in configs.PATH_FILE_LOG:
                 log_file = open(
                     each + datetime.datetime.now().strftime('%Y-%m') + u'.log',
                     'a+',
