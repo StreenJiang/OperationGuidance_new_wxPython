@@ -125,11 +125,15 @@ class CustomMenuButton(wx.Panel):
     def __init__(self, parent, id = -1, bitmap = wx.NullBitmap, label = '',
                  label_color = "#FFFFFF", pos = wx.DefaultPosition, size = wx.DefaultSize,
                  style = 0, validator = wx.DefaultValidator, custom_style = BUTTON_STYLE_HORIZONTAL,
-                 background_color = "#000000",
+                 background_color = "#000000", need_trigger_bar = False,
                  name = "CustomGenBitmapTextToggleButton"):
         wx.Panel.__init__(self, parent, id, pos = pos, size = size)
         self.button = CustomGenBitmapTextToggleButton(parent, id, bitmap, label, label_color, pos, size, style,
                                                       validator, custom_style, background_color, name)
+        # 按钮激活后是否需要一个激活的条状效果
+        self.need_trigger_bar = need_trigger_bar
+
+        # 上面那个要先设置，因为SetSize要用
         self.SetLabel(label)
         self.SetSize(size)
         self.SetPosition(pos)
@@ -184,7 +188,7 @@ class CustomMenuButton(wx.Panel):
     def SetBackgroundColour(self, colour):
         self.background_color = colour
         if self.button.custom_style == BUTTON_STYLE_HORIZONTAL:
-            if self.button.GetToggle():
+            if self.button.GetToggle() and self.need_trigger_bar:
                 super().SetBackgroundColour(self.button.label_color)
             else:
                 super().SetBackgroundColour(colour)
@@ -207,7 +211,7 @@ class CustomMenuButton(wx.Panel):
 
         super().SetSize(width, height)
 
-        if self.button.custom_style == BUTTON_STYLE_HORIZONTAL:
+        if self.button.custom_style == BUTTON_STYLE_HORIZONTAL and self.need_trigger_bar:
             width, height = (width - width * 0.05, height)
         else:
             pass
@@ -267,6 +271,7 @@ class CustomRadiusButton(buttons.GenBitmapButton):
     def __init__(self, parent, id = -1, label = "",
                  font_color = "#FFFFFF", background_color = "#000000", clicked_color = "#000000",
                  focused_alpha = 75, # 透明度（默认75，单位%）
+                 custom_font = None,
                  radius = 0, pos = wx.DefaultPosition, size = wx.DefaultSize,
                  style = 0, validator = wx.DefaultValidator, button_type = BUTTON_TYPE_NORMAL,
                  name = "genbutton"):
@@ -276,6 +281,7 @@ class CustomRadiusButton(buttons.GenBitmapButton):
         self.background_color = wx.Colour(background_color)
         self.clicked_color = wx.Colour(clicked_color)
         self.focused_alpha = focused_alpha
+        self.custom_font = custom_font
         self.radius = radius
         self.button_type = button_type
 
@@ -288,6 +294,10 @@ class CustomRadiusButton(buttons.GenBitmapButton):
         self.is_key_down = False
         self.Bind(wx.EVT_ENTER_WINDOW, self.on_enter)
         self.Bind(wx.EVT_LEAVE_WINDOW, self.on_leave)
+
+    def set_custom_font(self, custom_font):
+        self.custom_font = custom_font
+        self.SetBitmapLabel(self.createBitMap(self.label, self.font_color, self.background_color, None, self.radius))
 
     def OnSize(self, event):
         if self.is_key_down:
@@ -326,9 +336,6 @@ class CustomRadiusButton(buttons.GenBitmapButton):
         self.Refresh()
         self.focused = False
         event.Skip()
-
-    def OnLoseCapture(self, event):
-        super().OnGainFocus(event)
 
     def OnLeftDown(self, event):
         if not self.is_key_down:
@@ -380,13 +387,16 @@ class CustomRadiusButton(buttons.GenBitmapButton):
         dc.DrawRoundedRectangle(0, 0, width, height, radius)
 
         # Draw the text in the rounded rectangle
-        w, h = dc.GetSize()
         dc.SetTextForeground(font_color)
-        font_temp = self.GetFont()
-        font_temp.SetWeight(wx.FONTWEIGHT_BOLD)
-        # calculate the size of font according to the content size
-        font_temp.SetPointSize(int(w / 30 + h / 9) + 1)
-        dc.SetFont(font_temp)
+        w, h = dc.GetSize()
+        if self.custom_font is None:
+            font_temp = self.GetFont()
+            font_temp.SetWeight(wx.FONTWEIGHT_BOLD)
+            # calculate the size of font according to the content size
+            font_temp.SetPointSize(int(w / 30 + h / 9) + 1)
+            dc.SetFont(font_temp)
+        else:
+            dc.SetFont(self.custom_font)
         tw, th = dc.GetTextExtent(label)
         dc.DrawText(label, (w - tw) // 2, (h - th) // 2)
         # 删除DC

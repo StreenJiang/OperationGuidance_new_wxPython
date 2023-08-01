@@ -15,6 +15,7 @@ class MainFrame(wx.Frame):
 
         # 根据参数配置修改窗体属性
         self.SetSize(configs.SIZE_MAIN_FRAME_DEFAULT)
+        self.SetClientSize(configs.SIZE_MAIN_FRAME_DEFAULT)
         self.SetMinSize(configs.SIZE_MAIN_FRAME_MINIMUM)
 
         # 状态参数
@@ -34,8 +35,7 @@ class MainFrame(wx.Frame):
 
         # 主菜单panel
         main_menu_panel_pos, main_menu_panel_size = calculate_main_menu_panel_size(self.GetClientSize())
-        self.main_menu_panel = wx.Panel(self.main_panel, wx.ID_ANY, pos = main_menu_panel_pos,
-                                        size = main_menu_panel_size)
+        self.main_menu_panel = wx.Panel(self.main_panel, wx.ID_ANY, pos = main_menu_panel_pos, size = main_menu_panel_size)
         self.main_menu_panel.SetBackgroundColour(configs.COLOR_MENU_BACKGROUND)
 
         # 窗体拖动逻辑
@@ -118,6 +118,7 @@ class MainFrame(wx.Frame):
                 # 将后续需要用的配置信息存到对象上
                 btn_temp.bgColor = configs.COLOR_MENU_BUTTON_BACKGROUND
                 btn_temp.toggledColor = configs.COLOR_MENU_BUTTON_TOGGLE
+                btn_temp.menu_name = menu_config["name"]
                 btn_temp.events = menu_config["events"]
                 btn_temp.childrenMenus = menu_config["children"]
                 btn_temp.view = menu_config["view"]
@@ -162,6 +163,7 @@ class MainFrame(wx.Frame):
     # 绘制content_panel的内容
     def draw_content_panel(self, main_btn, size, margin):
         content_panel = main_btn.content_panel
+        content_panel.menu_name = main_btn.menu_name
         content_panel.staticBox = widgets.CustomStaticBox(content_panel, wx.ID_ANY,
                                                           border_thickness = 1, size = size,
                                                           border_color = configs.COLOR_CONTENT_PANEL_INSIDE_BORDER,
@@ -204,6 +206,7 @@ class MainFrame(wx.Frame):
                     label_color = configs.COLOR_TEXT_THEME,
                     custom_style = widgets.BUTTON_STYLE_HORIZONTAL,
                     background_color = configs.COLOR_MENU_BUTTON_BACKGROUND,
+                    need_trigger_bar = True,
                     pos = child_btn_temp_pos,
                     size = child_btn_temp_size
                 )
@@ -395,6 +398,10 @@ class MainFrame(wx.Frame):
         if not self.IsMaximized():
             self.main_menu_panel.mouse_pos = None
         event.Skip()
+
+    # 主窗体显示或隐藏
+    def show_all(self, flag: bool = True):
+        self.main_panel.Show(flag)
 
 
 # 计算主菜单panel的尺寸和位置

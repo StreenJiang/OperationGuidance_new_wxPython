@@ -6,6 +6,7 @@ import src.main.widgets as widgets
 import src.main.configs as configs
 from src.main.controllers import apis
 from src.main.utils import CommonUtils
+from src.main.views.Content_Workplace import WorkplaceView
 
 # 任务列表展示界面的gridSizer的列数固定为4
 MISSION_COLUMNS = 4
@@ -21,8 +22,9 @@ MISSION_ROWS_SCROLL = 3
 class ProductMissionView(wx.Panel):
     def __init__(self, parent = None, id = wx.ID_ANY,
                  pos = wx.DefaultPosition, size = wx.DefaultSize,
-                 style = 0, name = "ContentWorkplace"):
+                 style = 0, name = "ProductMissionView"):
         wx.Panel.__init__(self, parent, id, pos, size, style, name)
+        self.menu_name = parent.menu_name
         self.call_back_variables = None
         self.data = None
         self.add_mission_button = None
@@ -86,10 +88,6 @@ class ProductMissionView(wx.Panel):
 
             if self.GetSizer() is None:
                 boxSizer = wx.BoxSizer(wx.VERTICAL)
-
-                # missionProductSides = self.data.GetMissionProductSides()
-                # missionName = self.data.GetMissionName()
-
                 parentStaticBox.has_scroller = self.has_scroller
 
                 self.content_blocks = []
@@ -240,8 +238,12 @@ class ProductMissionView(wx.Panel):
         missionObj = eventObj.missionObj
         print("mission name: ", missionObj.GetMissionName())
 
+        # 点击事，隐藏主界面，跳转到操作员实际操作的工作台界面
+        topParent = CommonUtils.GetTopParent(eventObj)
+        topParent.show_all(False)
 
-
+        missionObj.view = WorkplaceView(topParent, wx.ID_ANY, pos = (0, 0),
+                                        size = topParent.GetClientSize(), title = self.menu_name)
 
 
 

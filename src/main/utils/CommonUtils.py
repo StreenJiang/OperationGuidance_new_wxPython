@@ -76,3 +76,18 @@ def WxImageToPILImage(wxImage: wx.Image) -> Image.Image:
     """
     # wxImage 的 GetData方法返回图像的字节码，通过bytes强制转换，可以直接作为frombytes的参数。
     return Image.frombytes('RGB', (wxImage.GetWidth(), wxImage.GetHeight()), bytes(wxImage.GetData()))
+
+
+def GetTopParent(obj):
+    """
+        获取传入对象的顶级父对象
+        :param obj: 要找到最顶级父对象的对象
+        :return: 顶级父对象
+    """
+    CheckNone(obj, "入参[obj]不能为空！")
+    parent = obj.GetParent()
+    if parent is not None and parent.GetParent() is not None:
+        return GetTopParent(parent)
+    return parent
+
+
