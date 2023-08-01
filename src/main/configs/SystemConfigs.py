@@ -1,7 +1,7 @@
 import wx
 
 from src.main.controllers import apis, call_backs
-from src.main.views.Content_Workplace import ContentWorkplace
+from src.main.views.Product_Mission_View import ProductMissionView
 
 # 系统菜单列表
 main_menus_config = [
@@ -71,7 +71,7 @@ main_menus_config = [
         "id": "00003",
         "name": "工作台",
         "icon": "configs/icons/workplace.png",
-        "view": ContentWorkplace,
+        "view": ProductMissionView,
         "enabled": True,
         "events": {
             wx.EVT_LEFT_DOWN: [

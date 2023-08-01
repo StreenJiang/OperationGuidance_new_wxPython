@@ -2,6 +2,7 @@ import math
 
 import wx
 import wx.lib.buttons as buttons
+from PIL import ImageColor
 
 import src.main.configs as configs
 from src.main.exceptions.Custom_Exception import LengthTooLongException
@@ -133,15 +134,62 @@ class CustomMenuButton(wx.Panel):
         self.SetSize(size)
         self.SetPosition(pos)
 
+        # 按钮是否为激活状态的标识
+        self.toggle_flag = False
+        # 背景颜色
+        self.background_color = background_color
+        # 将鼠标悬浮时的颜色设置为背景颜色变淡RBG值的10%
+        colorList = []
+        if isinstance(background_color, str):
+            colorList = list(ImageColor.getcolor(background_color, "RGBA"))
+        elif isinstance(background_color, wx.Colour):
+            colorList = list(background_color)
+        enter_color = []
+        for each in colorList:
+            each += (255 / 10)
+            if each < 0:
+                each = 0
+            enter_color.append(each)
+        self.enter_color = wx.Colour(enter_color)
+        # 初始化鼠标移出时的颜色
+        self.leave_color = background_color
+        # 按钮激活时的颜色
+        self.s_toggle_color = None
+
+        # 绑定事件，实现鼠标悬浮时改变背景颜色效果，移出时恢复原背景颜色（针对激活与否有不同的效果）
+        self.Bind(wx.EVT_ENTER_WINDOW, self.on_enter)
+        self.Bind(wx.EVT_LEAVE_WINDOW, self.on_leave)
+        self.Bind(wx.EVT_LEFT_UP, self.on_left_up)
+
+    def on_enter(self, event):
+        self.leave_color = self.background_color
+        if self.button.GetToggle():
+            self.leave_color = self.s_toggle_color
+        else:
+            self.toggle_flag = False
+            self.SetBackgroundColour(self.enter_color)
+
+    def on_leave(self, event):
+        self.SetBackgroundColour(self.leave_color)
+
+    # 先绑定的事件后执行，所以在这个事件执行前，已经修改了背景颜色
+    def on_left_up(self, event):
+        if self.button.GetToggle():
+            if not self.toggle_flag:
+                self.toggle_flag = True
+                self.leave_color = self.s_toggle_color = self.background_color
+        event.Skip()
+
     # 重写SetBackgroundColour方法，以达到给panel和按钮分别着色的目的
     def SetBackgroundColour(self, colour):
+        self.background_color = colour
         if self.button.custom_style == BUTTON_STYLE_HORIZONTAL:
             if self.button.GetToggle():
                 super().SetBackgroundColour(self.button.label_color)
             else:
                 super().SetBackgroundColour(colour)
-
         self.button.SetBackgroundColour(colour)
+        self.button.Refresh()
         self.Refresh()
 
     # 新建SetToggle，因为panel没有这个方法，实现调用按钮的SetToggle方法
