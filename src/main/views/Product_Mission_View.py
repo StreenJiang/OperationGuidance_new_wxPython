@@ -36,11 +36,22 @@ class ProductMissionView(wx.Panel):
         self.parent = self.GetParent()
         self.parent.scroll_bar = None
 
+        self.is_painting = False
         self.Bind(wx.EVT_PAINT, self.on_paint)
 
     def on_paint(self, event):
+        if not self.is_painting:
+            # call later
+            self.is_painting = True
+            wx.CallLater(200, self.call_later, event)
+        event.Skip()
+
+    def call_later(self, event):
+        # 调用后端API
         apis.API_GET_PRODUCT_MISSIONS(self, event)
+        # 从后端返回的数据中提取需要的数据
         dataTemp = self.call_back_variables["data"]
+        # dataTemp = []
 
         newSize = self.parent.GetSize()
         parentSizer = self.parent.GetSizer()
@@ -52,8 +63,6 @@ class ProductMissionView(wx.Panel):
 
         # 根据后端返回的数据判断该如何绘制当前展示的画面
         if len(dataTemp) > 0:
-            print("need some blocks and show every picture here")
-
             # 记录一些参数用于判断是否需要刷新界面
             if self.size_cache is not None:
                 if self.has_scroller:
@@ -62,7 +71,6 @@ class ProductMissionView(wx.Panel):
                 elif self.size_cache == contentNewSize:
                     self.need_redraw = False
 
-
             if self.data is not None and len(self.data) != len(dataTemp):
                 self.need_redraw = True
 
@@ -70,10 +78,10 @@ class ProductMissionView(wx.Panel):
             if not self.need_redraw:
                 # 重置参数
                 self.need_redraw = True
+                self.is_painting = False
                 return
 
             self.data = dataTemp
-            # self.data = None
 
             # 根据行数判断是否需要滚动条
             mission_count = len(self.data)
@@ -101,6 +109,7 @@ class ProductMissionView(wx.Panel):
                 for index in range(len(self.content_blocks)):
                     wx.CallAfter(self.resize_mission_block, index, self.content_blocks[index], gapBetweenMission, elementSize)
                     # self.resize_mission_block(index, self.content_blocks[index], gapBetweenMission, elementSize)
+                self.GetSizer().Fit(self)
 
             # 如果需要滚动条，则增加滚动条
             if self.has_scroller:
@@ -123,6 +132,7 @@ class ProductMissionView(wx.Panel):
                                                                      font_color = configs.COLOR_BUTTON_TEXT,
                                                                      background_color = configs.COLOR_BUTTON_BACKGROUND,
                                                                      clicked_color = configs.COLOR_BUTTON_CLICKED,
+                                                                     button_size_type = widgets.BUTTON_SIZE_TYPE_BIG,
                                                                      button_type = widgets.BUTTON_TYPE_NORMAL,
                                                                      size = self.get_button_size(newSize), radius = 3)
                 self.add_mission_button.Bind(wx.EVT_LEFT_DOWN, self.button_on_click)
@@ -136,7 +146,7 @@ class ProductMissionView(wx.Panel):
 
         # 记录当前尺寸
         self.size_cache = contentNewSize
-        event.Skip()
+        self.is_painting = False
 
     def reset_and_refresh(self, margin, contentNewSize):
         # 设置content_panel的位置和尺寸（放在这里设置是因为还需要根据内容调整尺寸）
@@ -146,7 +156,7 @@ class ProductMissionView(wx.Panel):
         self.Refresh()
 
     def get_button_size(self, content_size):
-        return content_size[0] / 8, content_size[1] / 10
+        return content_size[0] / 6.5, content_size[1] / 10
 
     def get_mission_item_size(self, content_size, gap_between_mission):
         return (content_size[0] - gap_between_mission * 5) / MISSION_COLUMNS, content_size[1] / MISSION_HEIGHT_RATIO
@@ -161,13 +171,15 @@ class ProductMissionView(wx.Panel):
         event.Skip()
 
     def create_mission_block(self, index, missionObj, gapBetweenMission, elementSize):
+        # 初始化工作台操作界面
+        missionObj.view = None
         # 创建展示内容块
         customPanel = widgets.CustomBorderPanel(self, wx.ID_ANY, border_color = configs.COLOR_CONTENT_BLOCK_BORDER_1,
                                                 pos = (gapBetweenMission, gapBetweenMission), border_thickness = 1,
                                                 size = elementSize)
         customPanel.SetBackgroundColour(configs.COLOR_CONTENT_BLOCK_BACKGROUND)
         customPanel.missionObj = missionObj
-        customPanel.missionNameStaticBitmapPanel = None
+        customPanel.bitmapPanel = None
         customPanel.missionNameStaticText = None
 
         # 展示只需要【任务名称】和【产品面首页图片】
@@ -176,8 +188,13 @@ class ProductMissionView(wx.Panel):
         # 增加一个覆盖整个内容块的空panel，用于绑定点击事件，保证内容块的所有区域都可以出发点击事件
         customPanel.clickPanel = wx.Panel(customPanel, wx.ID_ANY)
 
+        customPanel.Show(False)
         # 设置内容块的位置、尺寸
         self.resize_mission_block(index, customPanel, gapBetweenMission, elementSize)
+
+        def show_later():
+            customPanel.Show()
+        wx.CallLater(10, show_later)
 
         # 绑定点击事件
         customPanel.clickPanel.Bind(wx.EVT_LEFT_UP, self.mission_block_click)
@@ -190,6 +207,10 @@ class ProductMissionView(wx.Panel):
         # 修改内容页面的尺寸
         panelX = gapBetweenMission * (index % MISSION_COLUMNS + 1) + elementSize[0] * (index % MISSION_COLUMNS)
         panelY = gapBetweenMission * (math.floor(index / MISSION_COLUMNS) + 1) + elementSize[1] * (math.floor(index / MISSION_COLUMNS))
+        if elementSize[0] > 330 or elementSize[1] > 210:
+            customPanel.SetBorderThickness(2)
+        else:
+            customPanel.SetBorderThickness(1)
         customPanel.SetPosition((panelX, panelY))
         customPanel.SetSize(elementSize)
 
@@ -197,33 +218,37 @@ class ProductMissionView(wx.Panel):
         content_sizer = customPanel.GetSizer()
 
         # 设置图片的位置、大小
-        if customPanel.missionNameStaticBitmapPanel is None:
+        if customPanel.bitmapPanel is None:
             # 任务产品面的第一个面（展示块的缩略图）
-            customPanel.missionNameStaticBitmapPanel = wx.Panel(customPanel, wx.ID_ANY)
-            content_sizer.Add(customPanel.missionNameStaticBitmapPanel)
-            customPanel.missionNameStaticBitmapPanel.bitmap = wx.StaticBitmap(customPanel.missionNameStaticBitmapPanel, wx.ID_ANY)
+            customPanel.bitmapPanel = widgets.CustomBorderPanel(customPanel, wx.ID_ANY,
+                                                                border_color = configs.COLOR_CONTENT_BLOCK_BORDER_3,
+                                                                border_thickness = 1)
+            content_sizer.Add(customPanel.bitmapPanel)
+            customPanel.bitmapPanel.bitmap = wx.StaticBitmap(customPanel.bitmapPanel, wx.ID_ANY)
         # 设置自适应参数
-        imagePanel = customPanel.missionNameStaticBitmapPanel
-        bitmap = customPanel.missionNameStaticBitmapPanel.bitmap
+        imagePanel = customPanel.bitmapPanel
+        bitmap = customPanel.bitmapPanel.bitmap
         sideWxImage = CommonUtils.PILImageToWxImage(customPanel.sideImage)
-        iw, ih = panelWidth / 5 * 4, panelHeight / 10 * 7
-        sideWxImage.Rescale(iw, ih, wx.IMAGE_QUALITY_HIGH)
-        imagePanel.SetSize(iw, ih)
-        imagePanel.SetPosition(((panelWidth - iw) / 2, (panelHeight - ih) / 3))
+        border_width, border_height = panelWidth / 5 * 4, panelHeight / 10 * 7
+        sideWxImage.Rescale(border_width, border_height, wx.IMAGE_QUALITY_BILINEAR)
+        imagePanel.SetSize(border_width, border_height)
+        imagePanel.SetPosition(((panelWidth - border_width) / 2, (panelHeight - border_height) / 3))
+        imagePanel.SetBorderThickness(customPanel.border_thickness)
         bitmap.SetBitmap(sideWxImage.ConvertToBitmap())
 
         # 设置任务名称的位置、字体颜色、字体大小
         if customPanel.missionNameStaticText is None:
             customPanel.missionNameStaticText = wx.StaticText(customPanel, wx.ID_ANY, label = customPanel.missionName)
             content_sizer.Add(customPanel.missionNameStaticText)
+            customPanel.missionNameStaticText.SetForegroundColour(configs.COLOR_TEXT_THEME)
         # 设置自适应参数
         text = customPanel.missionNameStaticText
         font_temp = self.GetFont()
         font_temp.SetWeight(wx.FONTWEIGHT_BOLD)
         font_temp.SetPointSize(int(panelWidth / 50 + panelHeight / 30) + 1)
         text.SetFont(font_temp)
-        text.SetForegroundColour(configs.COLOR_TEXT_THEME)
         tw, th = text.GetTextExtent(text.GetLabel())
+        text.SetSize(tw, th)
         text.SetPosition(((panelWidth - tw) / 2, panelHeight / 10 * 8.5))
 
         # 添加了一个用于点击事件的空的panel，在这里保证它的大小和父panel一致
@@ -242,8 +267,11 @@ class ProductMissionView(wx.Panel):
         topParent = CommonUtils.GetTopParent(eventObj)
         topParent.show_all(False)
 
-        missionObj.view = WorkplaceView(topParent, wx.ID_ANY, pos = (0, 0),
-                                        size = topParent.GetClientSize(), title = self.menu_name)
+        if missionObj.view is None:
+            missionObj.view = WorkplaceView(topParent, wx.ID_ANY, pos = (0, 0),
+                                            size = topParent.GetClientSize(), title = self.menu_name)
+        else:
+            missionObj.view.Show()
 
 
 

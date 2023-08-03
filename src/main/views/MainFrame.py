@@ -4,6 +4,7 @@ from src.main import widgets
 import src.main.configs as configs
 import src.main.controllers as controller
 from src.main.configs import SystemConfigs
+from src.main.utils import CommonUtils
 
 
 # 主窗体类
@@ -52,11 +53,11 @@ class MainFrame(wx.Frame):
         self.add_main_menus()
 
         # 添加logo
-        self.logo_img_png = wx.Image(configs.PATH_LOGO_IMAGE)
+        logo_img_png = wx.Image(configs.PATH_LOGO_IMAGE, wx.BITMAP_TYPE_ANY)
         logo_img_pos, logo_img_size = calculate_logo_img_size(self.main_menu_panel.GetSize(),
-                                                              self.logo_img_png.GetSize())
-        self.logo_img_png.Rescale(logo_img_size[0], logo_img_size[1], wx.IMAGE_QUALITY_HIGH)
-        self.logo_img_static = wx.StaticBitmap(self.main_menu_panel, -1, self.logo_img_png.ConvertToBitmap())
+                                                              logo_img_png.GetSize())
+        logo_img_png.Rescale(logo_img_size[0], logo_img_size[1], wx.IMAGE_QUALITY_BOX_AVERAGE)
+        self.logo_img_static = wx.StaticBitmap(self.main_menu_panel, -1, logo_img_png.ConvertToBitmap())
         self.logo_img_static.SetPosition(logo_img_pos)
 
         # 添加到主sizer
@@ -100,7 +101,7 @@ class MainFrame(wx.Frame):
                 btn_temp = widgets.CustomMenuButton(
                     self.main_menu_panel,
                     wx.ID_ANY,
-                    wx.Image(menu_config["icon"]).ConvertToBitmap(),
+                    wx.Image(menu_config["icon"], wx.BITMAP_TYPE_ANY).ConvertToBitmap(),
                     label = menu_config["name"],
                     label_color = configs.COLOR_TEXT_THEME,
                     custom_style = widgets.BUTTON_STYLE_VERTICAL,
@@ -126,11 +127,13 @@ class MainFrame(wx.Frame):
                 if btn_temp.view is not None or len(btn_temp.childrenMenus) > 0:
                     # 将每个菜单的内容页容器绑定到菜单按钮上
                     content_panel_pos, content_panel_size, content_panel_margin = calculate_content_panel_size(self.GetClientSize(), len(btn_temp.childrenMenus) > 0)
-                    btn_temp.content_panel = wx.Panel(self.main_panel, wx.ID_ANY, pos = content_panel_pos, size = content_panel_size)
+                    btn_temp.content_panel = widgets.CustomBorderPanel(self.main_panel, wx.ID_ANY, pos = content_panel_pos, size = content_panel_size,
+                                                                       border_thickness = 1, border_color = configs.COLOR_CONTENT_PANEL_INSIDE_BORDER,
+                                                                       margin = content_panel_margin, radius = 0)
                     btn_temp.content_panel.SetBackgroundColour(configs.COLOR_CONTENT_PANEL_BACKGROUND)
 
                     # 绘制内容页panel的内容
-                    self.draw_content_panel(btn_temp, content_panel_size, content_panel_margin)
+                    self.draw_content_panel(btn_temp, content_panel_size)
 
                     # 初始化子菜单
                     btn_temp.child_menu_panel = None
@@ -161,24 +164,18 @@ class MainFrame(wx.Frame):
                 self.main_menus.append(btn_temp)
 
     # 绘制content_panel的内容
-    def draw_content_panel(self, main_btn, size, margin):
+    def draw_content_panel(self, main_btn, size):
         content_panel = main_btn.content_panel
         content_panel.menu_name = main_btn.menu_name
-        content_panel.staticBox = widgets.CustomStaticBox(content_panel, wx.ID_ANY,
-                                                          border_thickness = 1, size = size,
-                                                          border_color = configs.COLOR_CONTENT_PANEL_INSIDE_BORDER,
-                                                          margin = margin, radius = 0)
-        sizer = wx.StaticBoxSizer(content_panel.staticBox, wx.HORIZONTAL)
-        content_panel.SetSizer(sizer)
 
         # 实例化视图
         if main_btn.view is None:
             # TODO: children views show here
             pass
         elif main_btn.view is wx.Panel:
-            pass
+            content_panel.view = wx.Panel(content_panel, wx.ID_ANY)
         else:
-            main_btn.view(content_panel, wx.ID_ANY, size = size)
+            content_panel.view = main_btn.view(content_panel, wx.ID_ANY, size = size)
 
     # 添加子菜单（如果有的话）
     def add_child_menus(self, main_menu_btn):
@@ -201,7 +198,7 @@ class MainFrame(wx.Frame):
                 child_btn_temp = widgets.CustomMenuButton(
                     child_menu_panel,
                     wx.ID_ANY,
-                    wx.Image(child_menu["icon"]).ConvertToBitmap(),
+                    wx.Image(child_menu["icon"], wx.BITMAP_TYPE_ANY).ConvertToBitmap(),
                     label = child_menu["name"],
                     label_color = configs.COLOR_TEXT_THEME,
                     custom_style = widgets.BUTTON_STYLE_HORIZONTAL,
@@ -315,7 +312,8 @@ class MainFrame(wx.Frame):
         if not self.is_resizing:
             print("Resizing frame, Resolution: ", self.GetClientSize())
             self.is_resizing = True
-            wx.CallLater(200, self.resize_everything)
+            wx.CallLater(100, self.resize_everything)
+        event.Skip()
 
     # 异步画界面
     def resize_everything(self):
@@ -325,11 +323,11 @@ class MainFrame(wx.Frame):
         self.main_menu_panel.SetSize(main_menu_panel_size)
 
         # logo图片自适应调整大小和位置
-        self.logo_img_png = wx.Image(configs.PATH_LOGO_IMAGE)
+        logo_img_png = wx.Image(configs.PATH_LOGO_IMAGE, wx.BITMAP_TYPE_ANY)
         logo_img_pos, logo_img_size = calculate_logo_img_size(self.main_menu_panel.GetSize(),
-                                                              self.logo_img_png.GetSize())
-        self.logo_img_png.Rescale(logo_img_size[0], logo_img_size[1], wx.IMAGE_QUALITY_HIGH)
-        self.logo_img_static.SetBitmap(self.logo_img_png.ConvertToBitmap())
+                                                              logo_img_png.GetSize())
+        logo_img_png.Rescale(logo_img_size[0], logo_img_size[1], wx.IMAGE_QUALITY_BOX_AVERAGE)
+        self.logo_img_static.SetBitmap(logo_img_png.ConvertToBitmap())
         self.logo_img_static.SetPosition(logo_img_pos)
 
         # 刷新主菜单panel
@@ -350,8 +348,11 @@ class MainFrame(wx.Frame):
                     content_panel_pos, content_panel_size, content_panel_margin = calculate_content_panel_size(self.GetClientSize(), main_menu.child_menu_panel is not None)
                     main_menu.content_panel.SetSize(content_panel_size)
                     main_menu.content_panel.SetPosition(content_panel_pos)
-                    main_menu.content_panel.staticBox.SetMargin(content_panel_margin)
+                    main_menu.content_panel.SetMargin(content_panel_margin)
                     main_menu.content_panel.Refresh()
+                    if main_menu.view is not None:
+                        main_menu.content_panel.view.SetSize(content_panel_size)
+                        main_menu.content_panel.view.SetPosition(content_panel_pos)
 
                     if main_menu.child_menu_panel is not None:
                         child_menu_panel_pos, child_menu_panel_size = calculate_child_menu_panel_size(self.GetClientSize())
@@ -379,7 +380,7 @@ class MainFrame(wx.Frame):
             if event.Dragging():
                 pos_changed = event.GetPosition() - self.main_menu_panel.mouse_pos
                 # 判断拖动距离是否大于一定距离，如果太小则可能是点击事件，因此不重新定位，使按钮点击事件能正常触发
-                if (abs(pos_changed[0]), abs(pos_changed[1])) > (1, 1):
+                if (abs(pos_changed[0]), abs(pos_changed[1])) > (2, 2):
                     self.window_drag_flag = True
                     self.SetPosition(self.GetPosition() + pos_changed)
 
@@ -402,7 +403,6 @@ class MainFrame(wx.Frame):
     # 主窗体显示或隐藏
     def show_all(self, flag: bool = True):
         self.main_panel.Show(flag)
-
 
 # 计算主菜单panel的尺寸和位置
 def calculate_main_menu_panel_size(panel_size):
@@ -458,8 +458,7 @@ def calculate_child_menu_button_size(panel_size, btn_index):
 
 # 计算logo图片的尺寸和位置
 def calculate_logo_img_size(panel_size, logo_img_size):
-    height = panel_size[1] * 0.6
-    width = logo_img_size[0] * (height / logo_img_size[1])
+    width, height = CommonUtils.CalculateNewSizeWithSameRatio(logo_img_size, panel_size[1] * 0.6 / logo_img_size[1])
     pos_x = panel_size[0] - width - 5
     pos_y = (panel_size[1] - height) / 2
     return (pos_x, pos_y), (width, height)

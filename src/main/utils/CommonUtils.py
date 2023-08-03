@@ -91,3 +91,14 @@ def GetTopParent(obj):
     return parent
 
 
+def CalculateNewSizeWithSameRatio(size: tuple, ratio):
+    """
+        对尺寸进行等比例放大缩小指定倍数
+        :param size: 原始尺寸
+        :param ratio: 缩放比例
+        :return: 新尺寸
+    """
+    return size[0] * ratio, size[1] * ratio
+
+
+

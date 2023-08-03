@@ -6,6 +6,7 @@ from PIL import ImageColor
 
 import src.main.configs as configs
 from src.main.exceptions.Custom_Exception import LengthTooLongException
+from src.main.utils import CommonUtils
 
 # CustomGenBitmapTextToggleButton： custom_style
 BUTTON_STYLE_HORIZONTAL = 1
@@ -230,58 +231,27 @@ class CustomMenuButton(wx.Panel):
         self.button.SetPosition(pt)
 
 
-# 自定义StaticBox
-class CustomStaticBox(wx.StaticBox):
-    def __init__(self, parent, id, border_thickness = 1, border_color = wx.BLACK,
-                 margin = 5, radius = 0, has_scroller = False,
-                 pos = wx.DefaultPosition, size = wx.DefaultSize,
-                 style = wx.TRANSPARENT_WINDOW):
-        wx.StaticBox.__init__(self, parent, id, "", pos, size, style, "")
-        self.border_thickness = border_thickness
-        self.border_color = border_color
-        self.margin = margin
-        self.radius = radius
-        self.has_scroller = has_scroller
-
-        self.Bind(wx.EVT_PAINT, self.on_paint)
-
-    def on_paint(self, event):
-        dc = wx.GCDC(wx.PaintDC(self))
-        dc.SetBrush(wx.TRANSPARENT_BRUSH)
-        dc.SetPen(wx.Pen(self.border_color, self.border_thickness))
-        x = self.margin + math.floor(self.border_thickness / 2)
-        y = self.margin + math.floor(self.border_thickness / 2)
-        width = self.GetSize()[0] - self.margin * 2 - math.fabs(self.border_thickness - 1)
-        height = self.GetSize()[1] - self.margin * 2 - math.fabs(self.border_thickness - 1)
-        # 如果有滚动条，则给滚动条留出位置
-        if self.has_scroller:
-            width -= configs.SIZE_SCROLL_BAR
-        dc.DrawRoundedRectangle(x, y, width, height, self.radius)
-
-    def SetMargin(self, margin):
-        self.margin = margin
-
-
 # 自定义圆角按钮的类型
 BUTTON_TYPE_NORMAL = 1
 BUTTON_TYPE_SWITCH = 2
+BUTTON_SIZE_TYPE_NORMAL = 101
+BUTTON_SIZE_TYPE_BIG = 102
 
 # 自定义圆角按钮
 class CustomRadiusButton(buttons.GenBitmapButton):
     def __init__(self, parent, id = -1, label = "",
                  font_color = "#FFFFFF", background_color = "#000000", clicked_color = "#000000",
-                 focused_alpha = 75, # 透明度（默认75，单位%）
-                 custom_font = None,
-                 radius = 0, pos = wx.DefaultPosition, size = wx.DefaultSize,
-                 style = 0, validator = wx.DefaultValidator, button_type = BUTTON_TYPE_NORMAL,
-                 name = "genbutton"):
+                 focused_alpha = 75,  # 透明度（默认75，单位%）
+                 pos = wx.DefaultPosition, size = wx.DefaultSize,
+                 radius = 0, button_size_type = BUTTON_SIZE_TYPE_NORMAL, button_type = BUTTON_TYPE_NORMAL,
+                 style = 0, validator = wx.DefaultValidator, name = "genbutton"):
         buttons.GenBitmapButton.__init__(self, parent, id, None, pos, size, style, validator, name)
         self.label = label
         self.font_color = wx.Colour(font_color)
         self.background_color = wx.Colour(background_color)
         self.clicked_color = wx.Colour(clicked_color)
         self.focused_alpha = focused_alpha
-        self.custom_font = custom_font
+        self.button_size_type = button_size_type
         self.radius = radius
         self.button_type = button_type
 
@@ -295,8 +265,8 @@ class CustomRadiusButton(buttons.GenBitmapButton):
         self.Bind(wx.EVT_ENTER_WINDOW, self.on_enter)
         self.Bind(wx.EVT_LEAVE_WINDOW, self.on_leave)
 
-    def set_custom_font(self, custom_font):
-        self.custom_font = custom_font
+    def set_custom_font(self, button_size_type):
+        self.button_size_type = button_size_type
         self.SetBitmapLabel(self.createBitMap(self.label, self.font_color, self.background_color, None, self.radius))
 
     def OnSize(self, event):
@@ -322,7 +292,6 @@ class CustomRadiusButton(buttons.GenBitmapButton):
                     self.SetBitmapLabel(self.createBitMap(self.label, self.font_color, self.clicked_color, self.focused_alpha, self.radius))
                 self.Refresh()
                 self.focused = True
-
         event.Skip()
 
     def on_leave(self, event):
@@ -389,14 +358,14 @@ class CustomRadiusButton(buttons.GenBitmapButton):
         # Draw the text in the rounded rectangle
         dc.SetTextForeground(font_color)
         w, h = dc.GetSize()
-        if self.custom_font is None:
-            font_temp = self.GetFont()
-            font_temp.SetWeight(wx.FONTWEIGHT_BOLD)
-            # calculate the size of font according to the content size
+        font_temp = self.GetFont()
+        font_temp.SetWeight(wx.FONTWEIGHT_BOLD)
+        # calculate the size of font according to the content size
+        if self.button_size_type == BUTTON_SIZE_TYPE_BIG:
             font_temp.SetPointSize(int(w / 30 + h / 9) + 1)
-            dc.SetFont(font_temp)
-        else:
-            dc.SetFont(self.custom_font)
+        elif self.button_size_type == BUTTON_SIZE_TYPE_NORMAL:
+            font_temp.SetPointSize(int(w / 12 + h / 5) + 1)
+        dc.SetFont(font_temp)
         tw, th = dc.GetTextExtent(label)
         dc.DrawText(label, (w - tw) // 2, (h - th) // 2)
         # 删除DC
@@ -422,15 +391,128 @@ class CustomRadiusButton(buttons.GenBitmapButton):
         return image.ConvertToBitmap()
 
 
+# 自定义StaticBox
+class CustomStaticBox(wx.StaticBox):
+    def __init__(self, parent, id, border_thickness = 1, border_color = wx.BLACK,
+                 margin = 5, radius = 0, has_scroller = False, border_extra = 0,
+                 pos = wx.DefaultPosition, size = wx.DefaultSize,
+                 style = wx.TRANSPARENT_WINDOW):
+        wx.StaticBox.__init__(self, parent, id, "", pos, size, style, "")
+        self.border_thickness = border_thickness
+        self.border_color = border_color
+        self.margin = margin
+        self.radius = radius
+        self.has_scroller = has_scroller
+        self.border_extra = border_extra
+
+        self.Bind(wx.EVT_PAINT, self.on_paint)
+
+    def on_paint(self, event):
+        dc = wx.GCDC(wx.PaintDC(self))
+        dc.SetBrush(wx.TRANSPARENT_BRUSH)
+        dc.SetPen(wx.Pen(self.border_color, self.border_thickness))
+        x = self.margin + math.floor(self.border_thickness / 2)
+        y = self.margin + math.floor(self.border_thickness / 2)
+        width, height = self.GetValidSize()
+        # 如果有滚动条，则给滚动条留出位置
+        if self.has_scroller:
+            width -= configs.SIZE_SCROLL_BAR
+        dc.DrawRoundedRectangle(x, y, width, height, self.radius)
+
+    def SetBorderThickness(self, border_thickness):
+        self.border_thickness = border_thickness
+
+    def SetBorderColor(self, border_color):
+        self.border_color = border_color
+
+    def SetMargin(self, margin):
+        self.margin = margin
+
+    def SetBordersForSizer(self, border_extra):
+        self.border_extra = border_extra
+
+    def GetValidSize(self):
+        width = self.GetSize()[0] - self.margin * 2 - math.fabs(self.border_thickness - 1)
+        height = self.GetSize()[1] - self.margin * 2 - math.fabs(self.border_thickness - 1)
+        return int(width), int(height)
+
+    def GetBordersForSizer(self):
+        return self.border_extra, self.border_extra
+
+
 # 自定义带边框的panel容器
 class CustomBorderPanel(wx.Panel):
     def __init__(self, parent, id = -1, pos = wx.DefaultPosition, size = wx.DefaultSize,
-                 border_thickness = 1, border_color = wx.BLACK, style = 0, name = "CustomBorderPanel"):
+                 border_thickness = 1, margin = 0, radius = 0, border_extra = 0,
+                 border_color = wx.BLACK, style = 0, name = "CustomBorderPanel"):
         wx.Panel.__init__(self, parent, id, pos, size, style, name)
-        self.staticBox = CustomStaticBox(self, wx.ID_ANY,
-                                         border_thickness = border_thickness, size = size,
-                                         border_color = border_color,
-                                         margin = 0, radius = 0)
+        self.staticBox = CustomStaticBox(self, wx.ID_ANY, border_thickness = border_thickness, size = size,
+                                         border_color = border_color, margin = margin, radius = radius,
+                                         border_extra = border_extra)
         sizer = wx.StaticBoxSizer(self.staticBox, wx.HORIZONTAL)
         self.SetSizer(sizer)
 
+        self.border_thickness = border_thickness
+        self.border_color = border_color
+        self.margin = margin
+        self.border_extra = border_extra
+
+    def SetBorderThickness(self, border_thickness):
+        self.border_thickness = border_thickness
+        self.staticBox.SetBorderThickness(border_thickness)
+
+    def SetBorderColor(self, border_color):
+        self.border_color = border_color
+        self.staticBox.SetBorderColor(border_color)
+
+    def SetMargin(self, margin):
+        self.margin = margin
+        self.staticBox.SetMargin(margin)
+
+    def SetBordersForSizer(self, border_extra):
+        self.border_extra = border_extra
+        self.staticBox.SetBordersForSizer(border_extra)
+
+    def GetValidSize(self):
+        return self.staticBox.GetValidSize()
+
+    def GetBordersForSizer(self):
+        return self.staticBox.GetBordersForSizer()
+
+
+# 自定义Panel，这个只显示一个会根据Panel大小和比例参数，自适应改变大小并显示在正中央的bitmap图片
+class CustomBitmapPanel(wx.Panel):
+    def __init__(self, parent, id,
+                 image = None,                      # 这个是wx.Image对象
+                 image_ratio = 90,                  # 这个是图片大小的比例，单位%
+                 pos = wx.DefaultPosition,
+                 size = wx.DefaultSize, style = 0, name = "CustomBitmapPanel"):
+        wx.Panel.__init__(self, parent, id, pos, size, style, name)
+        # bitmap的parent采用跟当前对象的parent同一个，是为了避免bitmap改变大小时会影响到其parent的大小
+        self.bitmap = wx.StaticBitmap(parent, id, wx.Bitmap.FromRGBA(1, 1, 0, 0, 0), pos, size, style, name)
+        self.image = image
+        self.image_ratio = image_ratio
+        self.Rescale(size)
+
+        self.Bind(wx.EVT_SIZE, self.on_size)
+
+    def on_size(self, event):
+        size = self.GetSize()
+        self.Rescale(size)
+        event.Skip()
+
+    def Rescale(self, size):
+        self_w, self_h = size
+        if self.image is not None and self_w > 0 and self_h > 0:
+            size_base = self_w
+            if size_base > self_h:
+                size_base = self_h
+            image = self.image.Copy()
+            i_size = image.GetSize()
+            new_w, new_h = CommonUtils.CalculateNewSizeWithSameRatio(i_size, size_base * (self.image_ratio / 100) / i_size[1])
+            image.Rescale(new_w, new_h, wx.IMAGE_QUALITY_NEAREST)
+            self.bitmap.SetBitmap(image.ConvertToBitmap())
+
+            new_x = (self_w - new_w) // 2
+            new_y = (self_h - new_h) // 2
+            self.bitmap.SetPosition((new_x, new_y))
