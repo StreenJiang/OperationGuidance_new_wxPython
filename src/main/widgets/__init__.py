@@ -148,7 +148,7 @@ class CustomGenBitmapTextToggleButton(buttons.GenBitmapTextToggleButton):
             # handle the font, make it adjust the size
             font_temp = self.GetFont()
             font_temp.SetWeight(wx.FONTWEIGHT_BOLD)
-            font_temp.SetPointSize(int(width / 30 + height / 9) + 1)
+            font_temp.SetPointSize(int(width / 25 + height / 9) + 1)
             dc.SetFont(font_temp)
             dc.SetTextForeground(self.label_color)
 
@@ -160,7 +160,7 @@ class CustomGenBitmapTextToggleButton(buttons.GenBitmapTextToggleButton):
             pos_x = width / 15 + (width - tw) / 20 # adjust for bitmap and text to centre
             if bmp is not None:
                 dc.DrawBitmap(bmp, pos_x, (height - bh - (bh / 100 * 10)) / 2 + dy, hasMask)  # draw bitmap if available
-                pos_x = pos_x + (width / 20)  # extra spacing from bitmap
+                pos_x = pos_x + (width / 15)  # extra spacing from bitmap
 
             dc.DrawText(label, pos_x + bw + dx, (height - th) / 2 + dy)  # draw the text
         else:
