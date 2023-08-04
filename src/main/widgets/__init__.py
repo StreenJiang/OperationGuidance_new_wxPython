@@ -8,17 +8,47 @@ import src.main.configs as configs
 from src.main.exceptions.Custom_Exception import LengthTooLongException
 from src.main.utils import CommonUtils
 
+
+# 主菜单容纳按钮的panel组件
+class MainMenuPanel(wx.Panel):
+    def __init__(self, parent, id = wx.ID_ANY, background_color = "#000000",
+                 pos = wx.DefaultPosition, size = wx.DefaultSize, style = 0, name = "CustomMenuButton"):
+        wx.Panel.__init__(self, parent, id, pos = pos, size = size, style = style, name = name)
+        self.SetBackgroundColour(background_color)
+        self.buttons = []
+        self.Bind(wx.EVT_SIZE, self.on_size)
+
+    def on_size(self, event):
+        width, height = self.GetParent().GetSize()
+        self.SetSize(len(self.buttons) * height, height)
+        event.Skip()
+
+
+# 子菜单容纳按钮的panel组件
+class ChildMenuPanel(wx.Panel):
+    def __init__(self, parent, id = wx.ID_ANY, background_color = "#000000",
+                 pos = wx.DefaultPosition, size = wx.DefaultSize, style = 0, name = "CustomMenuButton"):
+        wx.Panel.__init__(self, parent, id, pos = pos, size = size, style = style, name = name)
+        self.SetBackgroundColour(background_color)
+        self.buttons = []
+        self.Bind(wx.EVT_SIZE, self.on_size)
+
+    def on_size(self, event):
+        width, height = self.GetParent().GetSize()
+        button_height = math.floor(height * 0.07)
+        self.SetSize(width, len(self.buttons) * button_height)
+        event.Skip()
+
+
 # CustomGenBitmapTextToggleButton： custom_style
 BUTTON_STYLE_HORIZONTAL = 1
 BUTTON_STYLE_VERTICAL = 2
-
-
 # 自定义图标文本开关按钮
 class CustomGenBitmapTextToggleButton(buttons.GenBitmapTextToggleButton):
     def __init__(self, parent, id = -1, bitmap = wx.NullBitmap, label = '',
-                 label_color = "#FFFFFF", pos = wx.DefaultPosition, size = wx.DefaultSize,
+                 label_color = "#FFFFFF", toggle_color = "#000000", background_color = "#000000",
+                 is_toggled = False, pos = wx.DefaultPosition, size = wx.DefaultSize,
                  style = 0, validator = wx.DefaultValidator, custom_style = BUTTON_STYLE_HORIZONTAL,
-                 background_color = "#000000",
                  name = "CustomGenBitmapTextToggleButton"):
         if custom_style == BUTTON_STYLE_VERTICAL and len(label) > configs.LENGTH_MAIN_MENU:
             raise LengthTooLongException("Length of main menu label[%s] too long, no more than %d" % (label, configs.LENGTH_MAIN_MENU))
@@ -27,13 +57,66 @@ class CustomGenBitmapTextToggleButton(buttons.GenBitmapTextToggleButton):
 
         buttons.GenBitmapButton.__init__(self, parent, id, bitmap, pos, size, style, validator, name)
         self.label_color = label_color
+        self.is_toggled = is_toggled
         self.SetLabel(label)
         self.custom_style = custom_style
         self.SetBezelWidth(0)
         self.SetUseFocusIndicator(False)
         self.SetBackgroundColour(background_color)
+        # 按钮激活时的颜色（初始化配置的，这个是固定的）
+        self.toggle_color = toggle_color
+
+        # 设置初始状态
+        self.SetToggle(is_toggled)
+
+        # 绑定事件，实现鼠标悬浮时改变背景颜色效果，移出时恢复原背景颜色（针对激活与否有不同的效果）
+        self.Bind(wx.EVT_ENTER_WINDOW, self.process_parent_event)
+        self.Bind(wx.EVT_LEAVE_WINDOW, self.process_parent_event)
+        self.Bind(wx.EVT_LEFT_DOWN, self.process_parent_event)
+        self.Bind(wx.EVT_LEFT_UP, self.process_parent_event)
+        self.Bind(wx.EVT_MOTION, self.process_parent_event)
+
+    def process_parent_event(self, event):
+        event.SetEventObject(self.GetParent())
+        self.GetParent().GetEventHandler().ProcessEvent(event)
+        event.Skip()
+
+    # def SetBackgroundColour(self, colour):
+    #     super().SetBackgroundColour(colour)
+    #     self.Refresh()
+
+    def SetToggle(self, flag):
+        if flag:
+            self.SetBackgroundColour(self.toggle_color)
+        super().SetToggle(flag)
+
+    def GetLabel(self):
+        return super().GetLabel()
+
+    # 重写绘制方法
+    def OnPaint(self, event):
+        (width, height) = self.GetClientSize()
+        x1 = y1 = 0
+        x2 = width - 1
+        y2 = height - 1
+        dc = wx.PaintDC(self)
+        brush = self.GetBackgroundBrush(dc)
+
+        # 这里加了一行代码：让背景画刷跟背景颜色一致（不知道为啥这个颜色默认是不一样的）
+        # 这个颜色会在按钮被按住时显示出来，然后会发现跟本身的背景颜色不一样
+        brush.SetColour(self.GetBackgroundColour())
+
+        if brush is not None:
+            dc.SetBackground(brush)
+            dc.Clear()
+        self.DrawBezel(dc, x1, y1, x2, y2)
+        self.DrawLabel(dc, width, height)
+        if self.hasFocus and self.useFocusInd:
+            self.DrawFocusIndicator(dc, width, height)
 
     def DrawLabel(self, dc, width, height, dx = 0, dy = 0):
+        if width <= 0 or height <= 0:
+            return
         bmp = self.bmpLabel
         if bmp is not None:  # if the bitmap is used
             if self.bmpDisabled and not self.IsEnabled():
@@ -46,11 +129,11 @@ class CustomGenBitmapTextToggleButton(buttons.GenBitmapTextToggleButton):
             # make bitmap adjust the size of button itself
             if self.custom_style == BUTTON_STYLE_HORIZONTAL:
                 img = bmp.ConvertToImage()
-                img.Rescale(height / 3 + width / 45, height / 3 + width / 45, wx.IMAGE_QUALITY_HIGH)
+                img.Rescale(math.ceil(height / 3 + width / 45), math.ceil(height / 3 + width / 45), wx.IMAGE_QUALITY_HIGH)
                 bmp = wx.Bitmap(img)
             else:
                 img = bmp.ConvertToImage()
-                img.Rescale(height / 2.7, height / 2.7, wx.IMAGE_QUALITY_HIGH)
+                img.Rescale(math.ceil(height / 2.7), math.ceil(height / 2.7), wx.IMAGE_QUALITY_HIGH)
                 bmp = wx.Bitmap(img)
 
             bw, bh = bmp.GetWidth(), bmp.GetHeight()
@@ -100,44 +183,26 @@ class CustomGenBitmapTextToggleButton(buttons.GenBitmapTextToggleButton):
 
             dc.DrawText(label, (width - tw) / 2 + dx, pos_y + bh + dy)  # draw the text
 
-    # 重写绘制方法
-    def OnPaint(self, event):
-        (width, height) = self.GetClientSize()
-        x1 = y1 = 0
-        x2 = width - 1
-        y2 = height - 1
-        dc = wx.PaintDC(self)
-        brush = self.GetBackgroundBrush(dc)
-
-        # 这里加了一行代码：让背景画刷跟背景颜色一致（不知道为啥这个颜色默认是不一样的）
-        brush.SetColour(self.GetBackgroundColour())
-
-        if brush is not None:
-            dc.SetBackground(brush)
-            dc.Clear()
-        self.DrawBezel(dc, x1, y1, x2, y2)
-        self.DrawLabel(dc, width, height)
-        if self.hasFocus and self.useFocusInd:
-            self.DrawFocusIndicator(dc, width, height)
-
 
 # 自定义菜单按钮（用panel模拟按钮，以实现子菜单的左侧选中效果）
 class CustomMenuButton(wx.Panel):
     def __init__(self, parent, id = -1, bitmap = wx.NullBitmap, label = '',
-                 label_color = "#FFFFFF", pos = wx.DefaultPosition, size = wx.DefaultSize,
+                 label_color = "#FFFFFF", is_toggled = False, pos = wx.DefaultPosition, size = wx.DefaultSize,
                  style = 0, validator = wx.DefaultValidator, custom_style = BUTTON_STYLE_HORIZONTAL,
-                 background_color = "#000000", need_trigger_bar = False,
-                 name = "CustomGenBitmapTextToggleButton"):
-        wx.Panel.__init__(self, parent, id, pos = pos, size = size)
-        self.button = CustomGenBitmapTextToggleButton(parent, id, bitmap, label, label_color, pos, size, style,
-                                                      validator, custom_style, background_color, name)
-        # 按钮激活后是否需要一个激活的条状效果
-        self.need_trigger_bar = need_trigger_bar
-
-        # 上面那个要先设置，因为SetSize要用
-        self.SetLabel(label)
-        self.SetSize(size)
-        self.SetPosition(pos)
+                 background_color = "#000000", toggle_color = "#000000", need_trigger_bar = False,
+                 name = "CustomMenuButton"):
+        wx.Panel.__init__(self, parent, id, pos = pos, size = size, name = name)
+        self.button = None
+        self.bitmap = bitmap
+        self.label = label
+        self.label_color = label_color
+        self.style = style
+        self.custom_style = custom_style
+        self.background_color = background_color
+        self.toggle_color = toggle_color
+        self.is_toggled = is_toggled
+        self.validator = validator
+        self.need_trigger_bar = need_trigger_bar # 按钮激活后是否需要一个激活的条状效果
 
         # 按钮是否为激活状态的标识
         self.toggle_flag = False
@@ -161,45 +226,78 @@ class CustomMenuButton(wx.Panel):
         # 按钮激活时的颜色
         self.s_toggle_color = None
 
+        if is_toggled and need_trigger_bar:
+            self.SetBackgroundColour(label_color)
+            self.leave_color = toggle_color
+
+        self.SetLabel(label)
+        # 根据parent重新设定按钮组件的大小
+        self.Bind(wx.EVT_SIZE, self.on_size)
         # 绑定事件，实现鼠标悬浮时改变背景颜色效果，移出时恢复原背景颜色（针对激活与否有不同的效果）
         self.Bind(wx.EVT_ENTER_WINDOW, self.on_enter)
         self.Bind(wx.EVT_LEAVE_WINDOW, self.on_leave)
         self.Bind(wx.EVT_LEFT_UP, self.on_left_up)
 
+    def on_size(self, event):
+        width, height = self.GetSize()
+        if self.custom_style == BUTTON_STYLE_VERTICAL:
+            self.SetSize(height, height)
+        else:
+            self.SetSize(width, height)
+        # 在这里初始化就不会导致panel在被初始化时，因bitmap是初始大小，而导致整个布局出错
+        if self.button is None:
+            self.button = CustomGenBitmapTextToggleButton(self, self.GetId(), self.bitmap, self.label,
+                                                          self.label_color, self.toggle_color, self.background_color,
+                                                          self.is_toggled, self.GetPosition(), (height, height), self.style,
+                                                          self.validator, self.custom_style, self.GetName())
+        event.Skip()
+
     def on_enter(self, event):
         self.leave_color = self.background_color
-        if self.button.GetToggle():
-            self.leave_color = self.s_toggle_color
+        if self.GetToggle():
+            self.leave_color = self.toggle_color
         else:
             self.toggle_flag = False
             self.SetBackgroundColour(self.enter_color)
+        event.Skip()
 
     def on_leave(self, event):
         self.SetBackgroundColour(self.leave_color)
+        event.Skip()
 
     # 先绑定的事件后执行，所以在这个事件执行前，已经修改了背景颜色
     def on_left_up(self, event):
-        if self.button.GetToggle():
+        if self.GetToggle():
             if not self.toggle_flag:
                 self.toggle_flag = True
-                self.leave_color = self.s_toggle_color = self.background_color
+                self.leave_color = self.toggle_color
         event.Skip()
 
     # 重写SetBackgroundColour方法，以达到给panel和按钮分别着色的目的
     def SetBackgroundColour(self, colour):
-        self.background_color = colour
-        if self.button.custom_style == BUTTON_STYLE_HORIZONTAL:
-            if self.button.GetToggle() and self.need_trigger_bar:
+        if self.custom_style == BUTTON_STYLE_HORIZONTAL:
+            if self.button is not None and self.button.GetToggle() and self.need_trigger_bar:
                 super().SetBackgroundColour(self.button.label_color)
             else:
                 super().SetBackgroundColour(colour)
-        self.button.SetBackgroundColour(colour)
-        self.button.Refresh()
+        if self.button is not None:
+            self.button.SetBackgroundColour(colour)
         self.Refresh()
 
     # 新建SetToggle，因为panel没有这个方法，实现调用按钮的SetToggle方法
     def SetToggle(self, flag):
-        self.button.SetToggle(flag)
+        if self.button is not None:
+            self.button.SetToggle(flag)
+        if flag:
+            self.SetBackgroundColour(self.toggle_color)
+        else:
+            self.SetBackgroundColour(self.background_color)
+        self.is_toggled = flag
+
+    def GetToggle(self):
+        if self.button is not None:
+            self.is_toggled = self.button.GetToggle()
+        return self.is_toggled
 
     # 重写SetSize方法，以达到给panel和按钮分别设置size的目的
     def SetSize(self, *args):
@@ -210,25 +308,21 @@ class CustomMenuButton(wx.Panel):
         elif len(args) == 2:
             width, height = args
 
+        if width == -1 or height == -1:
+            return
+
         super().SetSize(width, height)
+        if self.button is not None:
+            self.SetButtonSize(width, height)
 
-        if self.button.custom_style == BUTTON_STYLE_HORIZONTAL and self.need_trigger_bar:
-            width, height = (width - width * 0.05, height)
+    def SetButtonSize(self, width, height):
+        if self.custom_style == BUTTON_STYLE_HORIZONTAL and self.need_trigger_bar:
+            width_reduction = math.floor(width * 0.05)
+            width, height = (width - width_reduction, height)
+            self.button.SetPosition((width_reduction, 0))
         else:
             pass
-
         self.button.SetSize(width, height)
-
-    # 重写SetPosition方法，以达到给panel和按钮分别设置position的目的
-    def SetPosition(self, pt):
-        super().SetPosition(pt)
-
-        if self.button.custom_style == BUTTON_STYLE_HORIZONTAL:
-            pt = (pt[0] + self.GetSize()[0] - self.button.GetSize()[0], pt[1])
-        else:
-            pass
-
-        self.button.SetPosition(pt)
 
 
 # 自定义圆角按钮的类型
@@ -394,7 +488,7 @@ class CustomRadiusButton(buttons.GenBitmapButton):
 # 自定义StaticBox
 class CustomStaticBox(wx.StaticBox):
     def __init__(self, parent, id, border_thickness = 1, border_color = wx.BLACK,
-                 margin = 5, radius = 0, has_scroller = False, border_extra = 0,
+                 margin = 0, radius = 0, has_scroller = False, border_extra = 0,
                  pos = wx.DefaultPosition, size = wx.DefaultSize,
                  style = wx.TRANSPARENT_WINDOW):
         wx.StaticBox.__init__(self, parent, id, "", pos, size, style, "")
@@ -449,13 +543,28 @@ class CustomBorderPanel(wx.Panel):
         self.staticBox = CustomStaticBox(self, wx.ID_ANY, border_thickness = border_thickness, size = size,
                                          border_color = border_color, margin = margin, radius = radius,
                                          border_extra = border_extra)
-        sizer = wx.StaticBoxSizer(self.staticBox, wx.HORIZONTAL)
-        self.SetSizer(sizer)
+        self.sizer = wx.StaticBoxSizer(self.staticBox, wx.HORIZONTAL)
+        # wx.Panel.SetSizer(self, self.sizer)
+        self.SetSizer(self.sizer)
 
         self.border_thickness = border_thickness
         self.border_color = border_color
         self.margin = margin
         self.border_extra = border_extra
+        # 绑定事件：margin根据size大小自适应调整
+        self.Bind(wx.EVT_SIZE, self.on_size)
+
+    def on_size(self, event):
+        margin_1 = math.ceil(self.GetSize()[0] / 350)
+        margin_2 = math.ceil(self.GetSize()[1] / 300)
+        margin = margin_1
+        if margin > margin_2:
+            margin = margin_2
+        self.SetMargin(margin + 3)
+        event.Skip()
+
+    # def SetSizer(self, sizer, deleteOld = True):
+    #     self.sizer.Add(sizer, deleteOld)
 
     def SetBorderThickness(self, border_thickness):
         self.border_thickness = border_thickness

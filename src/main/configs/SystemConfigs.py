@@ -12,7 +12,7 @@ main_menus_config = [
         "view": None,                                           # 菜单所代表的视图（如果=None，则看子菜单的View；如果所有子菜单也没有视图，就代表是一个功能性按钮。比如退出按钮）
         "enabled": True,                                        # 菜单是否激活（根据许可证）
         "events": {
-            wx.EVT_LEFT_DOWN: [
+            wx.EVT_LEFT_UP: [
                 {
                     "api": apis.API_EVT_BUTTON_TEST,
                     "call_back": call_backs.CALL_BACK_TEST
@@ -31,7 +31,7 @@ main_menus_config = [
                 "icon": "configs/icons/manual_manipulate_tool.png",
                 "view": wx.Panel,
                 "events": {
-                    wx.EVT_LEFT_DOWN: [
+                    wx.EVT_LEFT_UP: [
                         {
                             "api": apis.API_EVT_BUTTON_TEST,
                             "call_back": call_backs.CALL_BACK_TEST
@@ -43,7 +43,7 @@ main_menus_config = [
                 "icon": "configs/icons/manual_control.png",
                 "view": wx.Panel,
                 "events": {
-                    wx.EVT_LEFT_DOWN: [
+                    wx.EVT_LEFT_UP: [
                         {
                             "api": apis.API_EVT_BUTTON_TEST,
                             "call_back": call_backs.CALL_BACK_TEST
@@ -59,7 +59,7 @@ main_menus_config = [
         "view": wx.Panel,
         "enabled": True,
         "events": {
-            wx.EVT_LEFT_DOWN: [
+            wx.EVT_LEFT_UP: [
                 {
                     "api": apis.API_EVT_BUTTON_TEST,
                     "call_back": call_backs.CALL_BACK_TEST
@@ -74,7 +74,7 @@ main_menus_config = [
         "view": ProductMissionView,
         "enabled": True,
         "events": {
-            wx.EVT_LEFT_DOWN: [
+            wx.EVT_LEFT_UP: [
                 {
                     "api": apis.API_GET_PRODUCT_MISSIONS,
                     "call_back": call_backs.CALL_BACK_SHOW_PRODUCT_MISSIONS
@@ -89,7 +89,7 @@ main_menus_config = [
         "view": wx.Panel,
         "enabled": True,
         "events": {
-            wx.EVT_LEFT_DOWN: [
+            wx.EVT_LEFT_UP: [
                 {
                     "api": apis.API_EVT_BUTTON_TEST,
                     "call_back": call_backs.CALL_BACK_TEST
@@ -104,7 +104,7 @@ main_menus_config = [
         "view": wx.Panel,
         "enabled": True,
         "events": {
-            wx.EVT_LEFT_DOWN: [
+            wx.EVT_LEFT_UP: [
                 {
                     "api": apis.API_EVT_BUTTON_TEST,
                     "call_back": call_backs.CALL_BACK_TEST
@@ -119,7 +119,7 @@ main_menus_config = [
         "view": None,
         "enabled": True,
         "events": {
-            wx.EVT_LEFT_DOWN: [
+            wx.EVT_LEFT_UP: [
                 {
                     "api": apis.API_EVT_BUTTON_TEST,
                     "call_back": call_backs.CALL_BACK_TEST
@@ -132,7 +132,7 @@ main_menus_config = [
                 "icon": "configs/icons/user_info.png",
                 "view": wx.Panel,
                 "events": {
-                    wx.EVT_LEFT_DOWN: [
+                    wx.EVT_LEFT_UP: [
                         {
                             "api": apis.API_EVT_BUTTON_TEST,
                             "call_back": call_backs.CALL_BACK_TEST
@@ -144,7 +144,7 @@ main_menus_config = [
                 "icon": "configs/icons/station_settings.png",
                 "view": wx.Panel,
                 "events": {
-                    wx.EVT_LEFT_DOWN: [
+                    wx.EVT_LEFT_UP: [
                         {
                             "api": apis.API_EVT_BUTTON_TEST,
                             "call_back": call_backs.CALL_BACK_TEST
@@ -156,7 +156,7 @@ main_menus_config = [
                 "icon": "configs/icons/communication_device.png",
                 "view": wx.Panel,
                 "events": {
-                    wx.EVT_LEFT_DOWN: [
+                    wx.EVT_LEFT_UP: [
                         {
                             "api": apis.API_EVT_BUTTON_TEST,
                             "call_back": call_backs.CALL_BACK_TEST
@@ -168,7 +168,7 @@ main_menus_config = [
                 "icon": "configs/icons/serial_port_device.png",
                 "view": wx.Panel,
                 "events": {
-                    wx.EVT_LEFT_DOWN: [
+                    wx.EVT_LEFT_UP: [
                         {
                             "api": apis.API_EVT_BUTTON_TEST,
                             "call_back": call_backs.CALL_BACK_TEST
@@ -180,7 +180,7 @@ main_menus_config = [
                 "icon": "configs/icons/store_variables.png",
                 "view": wx.Panel,
                 "events": {
-                    wx.EVT_LEFT_DOWN: [
+                    wx.EVT_LEFT_UP: [
                         {
                             "api": apis.API_EVT_BUTTON_TEST,
                             "call_back": call_backs.CALL_BACK_TEST
@@ -192,7 +192,7 @@ main_menus_config = [
                 "icon": "configs/icons/developer_choices.png",
                 "view": wx.Panel,
                 "events": {
-                    wx.EVT_LEFT_DOWN: [
+                    wx.EVT_LEFT_UP: [
                         {
                             "api": apis.API_EVT_BUTTON_TEST,
                             "call_back": call_backs.CALL_BACK_TEST
@@ -204,7 +204,7 @@ main_menus_config = [
                 "icon": "configs/icons/software_license.png",
                 "view": wx.Panel,
                 "events": {
-                    wx.EVT_LEFT_DOWN: [
+                    wx.EVT_LEFT_UP: [
                         {
                             "api": apis.API_EVT_BUTTON_TEST,
                             "call_back": call_backs.CALL_BACK_TEST
@@ -224,7 +224,7 @@ main_menus_config = [
         "view": wx.Panel,
         "enabled": True,
         "events": {
-            wx.EVT_LEFT_DOWN: [
+            wx.EVT_LEFT_UP: [
                 {
                     "api": apis.API_EVT_BUTTON_TEST,
                     "call_back": call_backs.CALL_BACK_TEST

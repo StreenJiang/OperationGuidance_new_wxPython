@@ -7,7 +7,7 @@ import src.main.models.ProductMission as productMission
 
 
 # 测试API方法，这个方法就是前后端的桥梁，前端配置好API，后端在API里调用后端写好的事件处理方法
-def API_EVT_BUTTON_TEST(obj, event):
+def API_EVT_BUTTON_TEST(event):
     event_obj = event.GetEventObject()
     print("test api [API_EVT_BUTTON_TEST], button label: %s" % event_obj.GetLabel())
 
@@ -22,7 +22,7 @@ def API_EVT_BUTTON_TEST(obj, event):
 
 
 # exit confirmation
-def exit_confirmation(obj, event):
+def exit_confirmation(event):
     event_obj = event.GetEventObject()
     dlg = wx.MessageDialog(event_obj, "确定要退出吗？", 'Updater', wx.YES_NO)
     dlg.SetTitle("退出程序")
@@ -31,15 +31,17 @@ def exit_confirmation(obj, event):
         sys.exit()
 
 
-def API_EVT_MOUSE_EVENTS_TEST(obj, event):
-    print("test api [API_EVT_MOUSE_EVENTS_TEST], button label: %s" % event.GetEventObject().GetLabel())
+def API_EVT_MOUSE_EVENTS_TEST(event):
+    event_obj = event.GetEventObject()
+    print("test api [API_EVT_MOUSE_EVENTS_TEST], button label: %s" % event_obj.GetLabel())
 
 
 # 工作台：获取任务（产品）列表
-def API_GET_PRODUCT_MISSIONS(obj, event):
+def API_GET_PRODUCT_MISSIONS(event):
+    event_obj = event.GetEventObject()
     # TODO: get missions data from back-end api(s)
     # 这里先暂时手写，之后要调用后端api，让后端返回
-    obj.call_back_variables = {
+    event_obj.call_back_variables = {
         "data": [
             productMission.ProductMission(
                 id = 1, mission_name = "OP-10机盖装配", mission_pn_code = "12345678",

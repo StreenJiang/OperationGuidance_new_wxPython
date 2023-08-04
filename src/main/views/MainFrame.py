@@ -27,46 +27,49 @@ class MainFrame(wx.Frame):
         # 设置系统最底层背景颜色（这里按应该用一些本地配置文件里的参数，因为这些参数通过用户修改是可以持久化到本地的）
         self.SetBackgroundColour(configs.COLOR_SYSTEM_BACKGROUND)
 
-        # 给主窗口设置主布局sizer - 垂直线性布局
-        # 共有2个子布局，分别是上方主菜单，下方主界面
-        main_sizer = wx.BoxSizer(wx.VERTICAL)
-
         # 主窗口panel
         self.main_panel = wx.Panel(self, wx.ID_ANY, pos = (0, 0), size = self.GetClientSize())
 
-        # 主菜单panel
-        main_menu_panel_pos, main_menu_panel_size = calculate_main_menu_panel_size(self.GetClientSize())
-        self.main_menu_panel = wx.Panel(self.main_panel, wx.ID_ANY, pos = main_menu_panel_pos, size = main_menu_panel_size)
-        self.main_menu_panel.SetBackgroundColour(configs.COLOR_MENU_BACKGROUND)
+        # 给主窗口设置主布局sizer - 垂直线性布局
+        # 共有2个子布局，分别是上方主菜单，下方内容
+        main_sizer = wx.BoxSizer(wx.VERTICAL)
 
-        # 窗体拖动逻辑
+        # 主菜单panel
+        self.main_menu_panel = wx.Panel(self.main_panel, wx.ID_ANY)
+        self.main_menu_panel.SetBackgroundColour(configs.COLOR_MENU_BACKGROUND)
+        # 添加到主sizer
+        main_sizer.Add(self.main_menu_panel, 3, wx.EXPAND)
+        # 初始化主菜单panel
+        self.set_up_main_menu_panel()
+        # 主菜单panel窗体拖动逻辑
         self.main_menu_panel.mouse_pos = None  # 初始化鼠标定位参数
         self.window_drag_flag = False
         self.main_menu_panel.Bind(wx.EVT_MOTION, self.window_dragging)
         self.main_menu_panel.Bind(wx.EVT_LEFT_DOWN, self.window_dragging_mouse_l_down)
         self.main_menu_panel.Bind(wx.EVT_LEFT_UP, self.window_dragging_mouse_l_up)
 
+        # 主体内容panel
+        self.content_outer_panel = wx.Panel(self.main_panel, wx.ID_ANY)
+        self.content_outer_panel.SetBackgroundColour(configs.COLOR_CONTENT_PANEL_BACKGROUND)
+        # 添加到主sizer
+        main_sizer.Add(self.content_outer_panel, 22, wx.EXPAND)
+        # 初始化主体内容panel
+        self.set_up_content_panel()
+
         # 子菜单panel
         self.child_menu_panel = None
 
-        # 添加主菜单
-        self.add_main_menus()
-
         # 添加logo
-        logo_img_png = wx.Image(configs.PATH_LOGO_IMAGE, wx.BITMAP_TYPE_ANY)
-        logo_img_pos, logo_img_size = calculate_logo_img_size(self.main_menu_panel.GetSize(),
-                                                              logo_img_png.GetSize())
-        logo_img_png.Rescale(logo_img_size[0], logo_img_size[1], wx.IMAGE_QUALITY_BOX_AVERAGE)
-        self.logo_img_static = wx.StaticBitmap(self.main_menu_panel, -1, logo_img_png.ConvertToBitmap())
-        self.logo_img_static.SetPosition(logo_img_pos)
-
-        # 添加到主sizer
-        main_sizer.Add(self.main_menu_panel)
-        if self.current_main_menu is not None:
-            main_sizer.Add(self.current_main_menu.content_panel)
+        # logo_img_png = wx.Image(configs.PATH_LOGO_IMAGE, wx.BITMAP_TYPE_ANY)
+        # logo_img_pos, logo_img_size = calculate_logo_img_size(self.main_menu_panel.GetSize(),
+        #                                                       logo_img_png.GetSize())
+        # logo_img_png.Rescale(logo_img_size[0], logo_img_size[1], wx.IMAGE_QUALITY_BOX_AVERAGE)
+        # self.logo_img_static = wx.StaticBitmap(self.main_menu_panel, -1, logo_img_png.ConvertToBitmap())
+        # self.logo_img_static.SetPosition(logo_img_pos)
 
         # 设置主sizer
         self.main_panel.SetSizer(main_sizer)
+        self.main_panel.Layout()
 
         # 给主窗口绑定【窗口大小变化】事件，确保不同分辨率下，系统UI始终保持最佳比例
         self.is_resizing = False
@@ -92,23 +95,36 @@ class MainFrame(wx.Frame):
         self.mouse_down = False
         event.Skip()
 
-    # 添加主菜单
-    def add_main_menus(self):
-        index = 0
+    # 初始化主菜单panel
+    def set_up_main_menu_panel(self):
+        main_menu_panel_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.main_menu_panel.SetSizer(main_menu_panel_sizer)
+
+        button_panel = widgets.MainMenuPanel(self.main_menu_panel, wx.ID_ANY, configs.COLOR_MENU_BUTTON_BACKGROUND)
+        main_menu_panel_sizer.Add(button_panel)
+        button_panel_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        button_panel.SetSizer(button_panel_sizer)
+
+        index = 0 # index放外面主要是因为配置里有些菜单不一定是enabled，而index需要保持0开始并且是连续的
         for menu_config in SystemConfigs.main_menus_config:
             if menu_config["enabled"] and menu_config["id"] in self.sys_variables["license_data"]["MAIN_MENU_LIST"]:
-                main_menu_panel_pos, main_menu_panel_size = calculate_main_menu_button_size(self.GetClientSize(), index)
                 btn_temp = widgets.CustomMenuButton(
-                    self.main_menu_panel,
+                    button_panel,
                     wx.ID_ANY,
                     wx.Image(menu_config["icon"], wx.BITMAP_TYPE_ANY).ConvertToBitmap(),
                     label = menu_config["name"],
                     label_color = configs.COLOR_TEXT_THEME,
                     custom_style = widgets.BUTTON_STYLE_VERTICAL,
                     background_color = configs.COLOR_MENU_BUTTON_BACKGROUND,
-                    pos = main_menu_panel_pos,
-                    size = main_menu_panel_size
+                    toggle_color = configs.COLOR_MENU_BUTTON_TOGGLE,
+                    is_toggled = index == 0,
                 )
+                button_panel.buttons.append(btn_temp)
+                button_panel_sizer.Add(btn_temp, 1, wx.EXPAND)
+
+                # 设置当前被激活的主菜单按钮
+                if index == 0:
+                    self.current_main_menu = btn_temp
 
                 # 绑定事件
                 btn_temp.Bind(wx.EVT_LEFT_UP, self.main_menu_toggled)
@@ -124,58 +140,165 @@ class MainFrame(wx.Frame):
                 btn_temp.childrenMenus = menu_config["children"]
                 btn_temp.view = menu_config["view"]
 
-                if btn_temp.view is not None or len(btn_temp.childrenMenus) > 0:
-                    # 将每个菜单的内容页容器绑定到菜单按钮上
-                    content_panel_pos, content_panel_size, content_panel_margin = calculate_content_panel_size(self.GetClientSize(), len(btn_temp.childrenMenus) > 0)
-                    btn_temp.content_panel = widgets.CustomBorderPanel(self.main_panel, wx.ID_ANY, pos = content_panel_pos, size = content_panel_size,
-                                                                       border_thickness = 1, border_color = configs.COLOR_CONTENT_PANEL_INSIDE_BORDER,
-                                                                       margin = content_panel_margin, radius = 0)
-                    btn_temp.content_panel.SetBackgroundColour(configs.COLOR_CONTENT_PANEL_BACKGROUND)
 
-                    # 绘制内容页panel的内容
-                    self.draw_content_panel(btn_temp, content_panel_size)
-
-                    # 初始化子菜单
-                    btn_temp.child_menu_panel = None
-                    btn_temp.child_menus = []
-
-                    # 将主菜单的子菜单添加到子菜单panel中
-                    self.add_child_menus(btn_temp)
-
-                    # 如果是第一个按钮，则程序启动时默认是触发状态
-                    if index == 0:
-                        self.current_main_menu = btn_temp
-                        btn_temp.SetToggle(True)
-                        btn_temp.SetBackgroundColour(btn_temp.toggledColor)
-
-                        # 展示当前的内容页
-                        btn_temp.content_panel.Show(True)
-
-                        # 当前第一个按钮默认触发
-                        if len(btn_temp.child_menus) > 0:
-                            btn_temp.child_menu_panel.Show(True)
-                            self.current_child_menu = btn_temp.child_menus[0]
-                            self.current_child_menu.SetToggle(True)
-                            self.current_child_menu.SetBackgroundColour(self.current_child_menu.toggledColor)
-                    else:
-                        btn_temp.content_panel.Show(False)
-                    index += 1
+                #
+                # if btn_temp.view is not None or len(btn_temp.childrenMenus) > 0:
+                #     # 将每个菜单的内容页容器绑定到菜单按钮上
+                #     content_panel_pos, content_panel_size, content_panel_margin = calculate_content_panel_size(self.GetClientSize(), len(btn_temp.childrenMenus) > 0)
+                #     btn_temp.content_panel = widgets.CustomBorderPanel(self.main_panel, wx.ID_ANY, pos = content_panel_pos, size = content_panel_size,
+                #                                                        border_thickness = 1, border_color = configs.COLOR_CONTENT_PANEL_INSIDE_BORDER,
+                #                                                        margin = content_panel_margin, radius = 0)
+                #     btn_temp.content_panel.SetBackgroundColour(configs.COLOR_CONTENT_PANEL_BACKGROUND)
+                #
+                #     # 绘制内容页panel的内容
+                #     self.draw_content_panel(btn_temp, content_panel_size)
+                #
+                #     # 初始化子菜单
+                #     btn_temp.child_menu_panel = None
+                #     btn_temp.child_menus = []
+                #
+                #     # 将主菜单的子菜单添加到子菜单panel中
+                #     self.add_child_menus(btn_temp)
+                #
+                #     # 如果是第一个按钮，则程序启动时默认是触发状态
+                #     if index == 0:
+                #         self.current_main_menu = btn_temp
+                #         btn_temp.SetToggle(True)
+                #         btn_temp.SetBackgroundColour(btn_temp.toggledColor)
+                #
+                #         # 展示当前的内容页
+                #         btn_temp.content_panel.Show(True)
+                #
+                #         # 当前第一个按钮默认触发
+                #         if len(btn_temp.child_menus) > 0:
+                #             btn_temp.child_menu_panel.Show(True)
+                #             self.current_child_menu = btn_temp.child_menus[0]
+                #             self.current_child_menu.SetToggle(True)
+                #             self.current_child_menu.SetBackgroundColour(self.current_child_menu.toggledColor)
+                #     else:
+                #         btn_temp.content_panel.Show(False)
+                index += 1
                 # 将按钮对象加入到list中以方便后续操作
                 self.main_menus.append(btn_temp)
+        self.main_menu_panel.Layout()
+        self.main_menu_panel.button_panel = button_panel
+
+    # 初始化主体内容panel
+    def set_up_content_panel(self):
+        content_outer_panel = self.content_outer_panel
+        content_outer_panel_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        content_outer_panel.SetSizer(content_outer_panel_sizer)
+
+        for main_menu_btn in self.main_menus:
+            # 初始化一个list用于存放当前主菜单的子菜单按钮
+            main_menu_btn.child_menus = []
+
+            # 给每个主菜单按钮再加一个panel，方便主菜单切换的时候显示和隐藏
+            main_menu_btn_content_panel = wx.Panel(content_outer_panel, wx.ID_ANY)
+            content_outer_panel_sizer.Add(main_menu_btn_content_panel, 1, wx.EXPAND)
+            main_menu_btn_content_panel_sizer = wx.BoxSizer(wx.HORIZONTAL)
+            main_menu_btn_content_panel.SetSizer(main_menu_btn_content_panel_sizer)
+            # 将子菜单的content_panel存入主菜单按钮对象
+            main_menu_btn.content_panel = main_menu_btn_content_panel
+
+            if len(main_menu_btn.childrenMenus) > 0:
+                # 子菜单按钮panel
+                child_menus_arr = main_menu_btn.childrenMenus
+                child_menu_panel = wx.Panel(main_menu_btn_content_panel, wx.ID_ANY)
+                main_menu_btn_content_panel_sizer.Add(child_menu_panel, 11, wx.EXPAND)
+                # 子菜单按钮panel的sizer
+                child_menu_panel_sizer = wx.BoxSizer(wx.VERTICAL)
+                child_menu_panel.SetSizer(child_menu_panel_sizer)
+                # 给当前panel设置它对应的主菜单按钮
+                child_menu_panel.main_menu_btn = main_menu_btn
+                child_menu_panel.SetBackgroundColour(configs.COLOR_MENU_BACKGROUND)
+                # 给所有子菜单按钮再加一个框，跟主菜单一样
+                button_panel = widgets.ChildMenuPanel(child_menu_panel, wx.ID_ANY, configs.COLOR_MENU_BUTTON_BACKGROUND)
+                child_menu_panel_sizer.Add(button_panel)
+                button_panel_sizer = wx.BoxSizer(wx.VERTICAL)
+                button_panel.SetSizer(button_panel_sizer)
+
+                # 主体内容需要一个新的panel，里面会放不同子菜单对应的不同的content_panel
+                child_content_outer_panel = wx.Panel(main_menu_btn_content_panel, wx.ID_ANY)
+                main_menu_btn_content_panel_sizer.Add(child_content_outer_panel, 89, wx.EXPAND)
+                child_content_outer_panel_sizer = wx.BoxSizer(wx.HORIZONTAL)
+                child_content_outer_panel.SetSizer(child_content_outer_panel_sizer)
+
+                # 遍历所有子菜单的配置
+                for index in range(len(child_menus_arr)):
+                    child_menu = child_menus_arr[index]
+                    child_btn_temp = widgets.CustomMenuButton(
+                        button_panel,
+                        wx.ID_ANY,
+                        wx.Image(child_menu["icon"], wx.BITMAP_TYPE_ANY).ConvertToBitmap(),
+                        label = child_menu["name"],
+                        label_color = configs.COLOR_TEXT_THEME,
+                        custom_style = widgets.BUTTON_STYLE_HORIZONTAL,
+                        background_color = configs.COLOR_MENU_BUTTON_BACKGROUND,
+                        toggle_color = configs.COLOR_MENU_BUTTON_TOGGLE,
+                        need_trigger_bar = True,
+                        is_toggled = index == 0,
+                    )
+                    button_panel.buttons.append(child_btn_temp)
+                    button_panel_sizer.Add(child_btn_temp, 1, wx.EXPAND)
+
+                    # 绑定事件
+                    child_btn_temp.Bind(wx.EVT_LEFT_UP, self.child_menu_toggled)
+
+                    # 将后续需要用的配置信息存到对象上
+                    child_btn_temp.bgColor = configs.COLOR_MENU_BUTTON_BACKGROUND
+                    child_btn_temp.toggledColor = configs.COLOR_MENU_BUTTON_TOGGLE
+                    child_btn_temp.events = child_menu["events"]
+
+                    # 将按钮对象加入到list中以方便后续操作
+                    main_menu_btn.child_menus.append(child_btn_temp)
+
+                    # 给每个子菜单创建对应的content_panel
+                    child_content_panel = widgets.CustomBorderPanel(child_content_outer_panel, wx.ID_ANY, border_thickness = 1,
+                                                                    border_color = configs.COLOR_CONTENT_PANEL_INSIDE_BORDER)
+                    child_content_panel.SetBackgroundColour(configs.COLOR_CONTENT_PANEL_BACKGROUND)
+                    child_content_outer_panel_sizer.Add(child_content_panel, 1, wx.EXPAND)
+
+                    # 如果不是当前被激活的按钮的子菜单，则不展示
+                    if index != 0:
+                        child_content_panel.Show(False)
+
+                    # 存入到对应子菜单的对象里
+                    child_btn_temp.child_content_panel = child_content_panel
+
+                child_menu_panel.Layout()
+                main_menu_btn.child_menu_panel = child_menu_panel
+            elif main_menu_btn.view is not None:
+                # # 将每个菜单的内容页容器绑定到菜单按钮上
+                # content_panel_pos, content_panel_size, content_panel_margin = calculate_content_panel_size(self.GetClientSize(), len(main_menu_btn.childrenMenus) > 0)
+                # main_menu_btn.content_panel = widgets.CustomBorderPanel(content_panel, wx.ID_ANY, pos = content_panel_pos, size = content_panel_size,
+                #                                                         border_thickness = 1, border_color = configs.COLOR_CONTENT_PANEL_INSIDE_BORDER,
+                #                                                         margin = content_panel_margin, radius = 0)
+                # main_menu_btn.content_panel.SetBackgroundColour(configs.COLOR_CONTENT_PANEL_BACKGROUND)
+                #
+                # # 绘制内容页panel的内容
+                # self.draw_content_panel(main_menu_btn, content_panel_size)
+                pass
+
+            if main_menu_btn is not self.current_main_menu:
+                main_menu_btn_content_panel.Show(False)
+
+
+        self.content_outer_panel.Layout()
 
     # 绘制content_panel的内容
-    def draw_content_panel(self, main_btn, size):
-        content_panel = main_btn.content_panel
-        content_panel.menu_name = main_btn.menu_name
+    def draw_content_panel(self, main_menu_btn, size):
+        content_panel = main_menu_btn.content_panel
+        content_panel.menu_name = main_menu_btn.menu_name
 
         # 实例化视图
-        if main_btn.view is None:
+        if main_menu_btn.view is None:
             # TODO: children views show here
             pass
-        elif main_btn.view is wx.Panel:
+        elif main_menu_btn.view is wx.Panel:
             content_panel.view = wx.Panel(content_panel, wx.ID_ANY)
         else:
-            content_panel.view = main_btn.view(content_panel, wx.ID_ANY, size = size)
+            content_panel.view = main_menu_btn.view(content_panel, wx.ID_ANY, size = size)
 
     # 添加子菜单（如果有的话）
     def add_child_menus(self, main_menu_btn):
@@ -221,86 +344,124 @@ class MainFrame(wx.Frame):
 
     # 主菜单点击事件 - 释放
     def main_menu_toggled(self, event):
-        btn_temp = event.GetEventObject()
+        btn_panel_temp = event.GetEventObject()
 
         # 判断是否在拖拽主窗体，是的话本次点击事件不触发
         if self.window_drag_flag:
             self.window_drag_flag = False
             return
 
-        # 如果有视图
-        if btn_temp.view is not None or len(btn_temp.childrenMenus) > 0:
-            # 如果点击的主菜单按钮不是当前已经激活的，则清空content_panel的内容
-            if btn_temp is not self.current_main_menu:
-                self.current_main_menu.content_panel.Show(False)
-                if self.current_main_menu.child_menu_panel is not None:
-                    self.current_main_menu.child_menu_panel.Show(False)
+        # 判断当前点击的按钮是否是当前已经激活的主菜单按钮
+        if btn_panel_temp is not self.current_main_menu:
+            current = self.current_main_menu
 
-                # 先把当前激活的按钮重置
-                self.current_main_menu.SetToggle(False)
-                self.current_main_menu.SetBackgroundColour(self.current_main_menu.bgColor)
+            # 如果不是则说明要换一个界面了，因此先隐藏当前的界面
+            current.content_panel.Show(False)
+            # 把当前激活的按钮重置
+            current.SetToggle(False)
+            # 激活新的按钮
+            btn_panel_temp.SetToggle(True)
 
-                # 激活新的按钮
-                btn_temp.SetToggle(True)
-                btn_temp.SetBackgroundColour(btn_temp.toggledColor)
+            # 激活按钮关联的内容容器
+            btn_panel_temp.content_panel.Show(True)
 
-                # 激活按钮关联的内容容器
-                btn_temp.content_panel.Show(True)
-                if btn_temp.child_menu_panel is not None:
-                    btn_temp.child_menu_panel.Show(True)
+            # 如果有子菜单，则激活首个子菜单
+            if len(btn_panel_temp.child_menus) > 0:
+                # 把当前激活子菜单按钮重置
+                if self.current_child_menu is not None:
+                    self.current_child_menu.SetToggle(False)
 
-                # 如果有子菜单，则激活首个子菜单
-                if len(btn_temp.child_menus) > 0:
-                    # 先把当前激活的按钮重置
-                    if self.current_child_menu is not None:
-                        self.current_child_menu.SetToggle(False)
-                        self.current_child_menu.SetBackgroundColour(self.current_child_menu.bgColor)
+                # 然后再激活新的按钮
+                btn_panel_temp.child_menus[0].SetToggle(True)
+                self.current_child_menu = btn_panel_temp.child_menus[0]
 
-                    # 然后再激活新的按钮
-                    btn_temp.child_menus[0].SetToggle(True)
-                    btn_temp.child_menus[0].SetBackgroundColour(btn_temp.child_menus[0].toggledColor)
-                    self.current_child_menu = btn_temp.child_menus[0]
+            # 更新当前主菜单按钮对象
+            self.current_main_menu = btn_panel_temp
 
-                # 将不显示的panel从主sizer中移除并将显示的加进去
-                self.main_panel.GetSizer().Detach(self.current_main_menu.content_panel)
-                self.main_panel.GetSizer().Add(btn_temp.content_panel)
-
-                # 更新当前主菜单按钮对象
-                self.current_main_menu = btn_temp
-
-            # 不管是啥菜单，只要点了就一定是激活状态（防止重复点击同一个菜单时，按钮组件会在激活和未激活的样式上变来变去）
-            self.current_main_menu.SetToggle(True)
-        else:
-            btn_temp.SetToggle(True)
-            btn_temp.SetBackgroundColour(self.current_main_menu.toggledColor)
-
-            def call_later():
-                btn_temp.SetToggle(False)
-                btn_temp.SetBackgroundColour(self.current_main_menu.bgColor)
-            wx.CallLater(200, call_later)
-
+        # # 如果有视图
+        # if btn_panel_temp.view is not None or len(btn_panel_temp.childrenMenus) > 0:
+        #     # 如果点击的主菜单按钮不是当前已经激活的，则清空content_panel的内容
+        #     if btn_panel_temp is not self.current_main_menu:
+        #         self.current_main_menu.content_outer_panel.Show(False)
+        #         if self.current_main_menu.child_menu_panel is not None:
+        #             self.current_main_menu.child_menu_panel.Show(False)
+        #
+        #         # 先把当前激活的按钮重置
+        #         self.current_main_menu.SetToggle(False)
+        #         self.current_main_menu.SetBackgroundColour(self.current_main_menu.bgColor)
+        #
+        #         # 激活新的按钮
+        #         btn_panel_temp.SetToggle(True)
+        #         btn_panel_temp.SetBackgroundColour(btn_panel_temp.toggledColor)
+        #
+        #         # 激活按钮关联的内容容器
+        #         btn_panel_temp.content_outer_panel.Show(True)
+        #         if btn_panel_temp.child_menu_panel is not None:
+        #             btn_panel_temp.child_menu_panel.Show(True)
+        #
+        #         # 如果有子菜单，则激活首个子菜单
+        #         if len(btn_panel_temp.child_menus) > 0:
+        #             # 先把当前激活的按钮重置
+        #             if self.current_child_menu is not None:
+        #                 self.current_child_menu.SetToggle(False)
+        #                 self.current_child_menu.SetBackgroundColour(self.current_child_menu.bgColor)
+        #
+        #             # 然后再激活新的按钮
+        #             btn_panel_temp.child_menus[0].SetToggle(True)
+        #             btn_panel_temp.child_menus[0].SetBackgroundColour(btn_panel_temp.child_menus[0].toggledColor)
+        #             self.current_child_menu = btn_panel_temp.child_menus[0]
+        #
+        #         # 将不显示的panel从主sizer中移除并将显示的加进去
+        #         self.main_panel.GetSizer().Detach(self.current_main_menu.content_outer_panel)
+        #         self.main_panel.GetSizer().Add(btn_panel_temp.content_outer_panel)
+        #
+        #         # 更新当前主菜单按钮对象
+        #         self.current_main_menu = btn_panel_temp
+        #
+        #     # 不管是啥菜单，只要点了就一定是激活状态（防止重复点击同一个菜单时，按钮组件会在激活和未激活的样式上变来变去）
+        #     self.current_main_menu.SetToggle(True)
+        # else:
+        #     btn_panel_temp.SetToggle(True)
+        #     btn_panel_temp.SetBackgroundColour(self.current_main_menu.toggledColor)
+        #
+        #     def call_later():
+        #         btn_panel_temp.SetToggle(False)
+        #         btn_panel_temp.SetBackgroundColour(self.current_main_menu.bgColor)
+        #     wx.CallLater(200, call_later)
+        #
+        #
 
         # 触发事件对象所绑定的事件
-        controller.call_api(self, btn_temp, event)
+        controller.call_api(event)
+
+        # 不管是啥菜单，只要点了就一定是激活状态（toggle按钮组件底层SetToggle一定会被调用，所以是为了防止重复点击同一个菜单时，按钮组件会在激活和未激活的样式上变来变去）
+        self.current_main_menu.SetToggle(True)
+        self.content_outer_panel.Layout()
         event.Skip()
 
     # 子菜单点击事件 - 释放
     def child_menu_toggled(self, event):
-        btn_temp = event.GetEventObject()
-        if btn_temp is not self.current_child_menu:
-            # 先把当前激活的按钮重置
-            self.current_child_menu.SetToggle(False)
-            self.current_child_menu.SetBackgroundColour(self.current_child_menu.bgColor)
+        btn_panel_temp = event.GetEventObject()
+
+        if btn_panel_temp is not self.current_child_menu:
+            current = self.current_child_menu
+
+            # 把当前激活的按钮重置
+            current.SetToggle(False)
+            # 隐藏当前子菜单的内容
+            current.child_content_panel.Show(False)
 
             # 激活新的按钮
-            btn_temp.SetToggle(True)
-            btn_temp.SetBackgroundColour(btn_temp.toggledColor)
+            btn_panel_temp.SetToggle(True)
+            # 显示新激活的菜单的内容
+            btn_panel_temp.child_content_panel.Show(True)
+            btn_panel_temp.child_content_panel.GetParent().Layout()
 
-            # 触发事件对象所绑定的事件
-            controller.call_api(self, btn_temp, event)
+            # # 触发事件对象所绑定的事件
+            # controller.call_api(event)
 
             # 更新当前按钮对象
-            self.current_child_menu = btn_temp
+            self.current_child_menu = btn_panel_temp
 
         # 不管是啥菜单，只要点了就一定是激活状态（防止重复点击同一个菜单时，按钮组件会在激活和未激活的样式上变来变去）
         self.current_child_menu.SetToggle(True)
@@ -322,55 +483,55 @@ class MainFrame(wx.Frame):
         main_menu_panel_pos, main_menu_panel_size = calculate_main_menu_panel_size(self.GetClientSize())
         self.main_menu_panel.SetSize(main_menu_panel_size)
 
-        # logo图片自适应调整大小和位置
-        logo_img_png = wx.Image(configs.PATH_LOGO_IMAGE, wx.BITMAP_TYPE_ANY)
-        logo_img_pos, logo_img_size = calculate_logo_img_size(self.main_menu_panel.GetSize(),
-                                                              logo_img_png.GetSize())
-        logo_img_png.Rescale(logo_img_size[0], logo_img_size[1], wx.IMAGE_QUALITY_BOX_AVERAGE)
-        self.logo_img_static.SetBitmap(logo_img_png.ConvertToBitmap())
-        self.logo_img_static.SetPosition(logo_img_pos)
-
-        # 刷新主菜单panel
-        self.main_menu_panel.Refresh()
+        # # logo图片自适应调整大小和位置
+        # logo_img_png = wx.Image(configs.PATH_LOGO_IMAGE, wx.BITMAP_TYPE_ANY)
+        # logo_img_pos, logo_img_size = calculate_logo_img_size(self.main_menu_panel.GetSize(),
+        #                                                       logo_img_png.GetSize())
+        # logo_img_png.Rescale(logo_img_size[0], logo_img_size[1], wx.IMAGE_QUALITY_BOX_AVERAGE)
+        # self.logo_img_static.SetBitmap(logo_img_png.ConvertToBitmap())
+        # self.logo_img_static.SetPosition(logo_img_pos)
+        #
+        # # 刷新主菜单panel
+        # self.main_menu_panel.Refresh()
 
         # 主菜单panel中的所有按钮也要跟着改
-        for main_menu in self.main_menu_panel.GetChildren():
-            if isinstance(main_menu, widgets.CustomMenuButton):
-                index = self.main_menus.index(main_menu)
-                main_menu_button_pos, main_menu_button_size = calculate_main_menu_button_size(self.GetClientSize(), index)
-                # 更改按钮的大小
-                main_menu.SetSize(main_menu_button_size)
-                # 更改按钮的位置
-                main_menu.SetPosition(main_menu_button_pos)
+        # for main_menu in self.main_menu_panel.GetChildren():
+        #     if isinstance(main_menu, widgets.CustomMenuButton):
+        #         index = self.main_menus.index(main_menu)
+                # main_menu_button_pos, main_menu_button_size = calculate_main_menu_button_size(self.GetClientSize(), index)
+                # # 更改按钮的大小
+                # main_menu.SetSize(main_menu_button_size)
+                # # 更改按钮的位置
+                # main_menu.SetPosition(main_menu_button_pos)
 
-                if main_menu.view is not None or len(main_menu.childrenMenus) > 0:
-                    # 调整每个主菜单下的内容panel的size和位置
-                    content_panel_pos, content_panel_size, content_panel_margin = calculate_content_panel_size(self.GetClientSize(), main_menu.child_menu_panel is not None)
-                    main_menu.content_panel.SetSize(content_panel_size)
-                    main_menu.content_panel.SetPosition(content_panel_pos)
-                    main_menu.content_panel.SetMargin(content_panel_margin)
-                    main_menu.content_panel.Refresh()
-                    if main_menu.view is not None:
-                        main_menu.content_panel.view.SetSize(content_panel_size)
-                        main_menu.content_panel.view.SetPosition(content_panel_pos)
-
-                    if main_menu.child_menu_panel is not None:
-                        child_menu_panel_pos, child_menu_panel_size = calculate_child_menu_panel_size(self.GetClientSize())
-                        main_menu.child_menu_panel.SetSize(child_menu_panel_size)
-                        main_menu.child_menu_panel.SetPosition(child_menu_panel_pos)
-
-                        # 子菜单panel中的所有按钮也要跟着改
-                        for child_menu in main_menu.child_menu_panel.GetChildren():
-                            if isinstance(child_menu, widgets.CustomMenuButton):
-                                index = main_menu.child_menus.index(child_menu)
-                                child_btn_temp_pos, child_btn_temp_size = calculate_child_menu_button_size(self.GetClientSize(), index)
-                                # 更改按钮的大小
-                                child_menu.SetSize(child_btn_temp_size)
-                                # 更改按钮的位置
-                                child_menu.SetPosition(child_btn_temp_pos)
-
-                        # 刷新子菜单panel
-                        main_menu.child_menu_panel.Refresh()
+                # if main_menu.view is not None or len(main_menu.childrenMenus) > 0:
+                #     # 调整每个主菜单下的内容panel的size和位置
+                #     content_panel_pos, content_panel_size, content_panel_margin = calculate_content_panel_size(self.GetClientSize(), main_menu.child_menu_panel is not None)
+                #     main_menu.content_panel.SetSize(content_panel_size)
+                #     main_menu.content_panel.SetPosition(content_panel_pos)
+                #     main_menu.content_panel.SetMargin(content_panel_margin)
+                #     main_menu.content_panel.Refresh()
+                #     if main_menu.view is not None:
+                #         main_menu.content_panel.view.SetSize(content_panel_size)
+                #         main_menu.content_panel.view.SetPosition(content_panel_pos)
+                #
+                #     if main_menu.child_menu_panel is not None:
+                #         child_menu_panel_pos, child_menu_panel_size = calculate_child_menu_panel_size(self.GetClientSize())
+                #         main_menu.child_menu_panel.SetSize(child_menu_panel_size)
+                #         main_menu.child_menu_panel.SetPosition(child_menu_panel_pos)
+                #
+                #         # 子菜单panel中的所有按钮也要跟着改
+                #         for child_menu in main_menu.child_menu_panel.GetChildren():
+                #             if isinstance(child_menu, widgets.CustomMenuButton):
+                #                 index = main_menu.child_menus.index(child_menu)
+                #                 child_btn_temp_pos, child_btn_temp_size = calculate_child_menu_button_size(self.GetClientSize(), index)
+                #                 # 更改按钮的大小
+                #                 child_menu.SetSize(child_btn_temp_size)
+                #                 # 更改按钮的位置
+                #                 child_menu.SetPosition(child_btn_temp_pos)
+                #
+                #         # 刷新子菜单panel
+                #         main_menu.child_menu_panel.Refresh()
         self.Refresh()
         self.is_resizing = False
 
@@ -385,7 +546,7 @@ class MainFrame(wx.Frame):
                     self.SetPosition(self.GetPosition() + pos_changed)
 
                 # 触发事件对象所绑定的事件
-                controller.call_api(self, event.GetEventObject(), event)
+                controller.call_api(event)
         event.Skip()
 
     # 窗体拖拽事件 - 鼠标左键按下
@@ -462,3 +623,4 @@ def calculate_logo_img_size(panel_size, logo_img_size):
     pos_x = panel_size[0] - width - 5
     pos_y = (panel_size[1] - height) / 2
     return (pos_x, pos_y), (width, height)
+
