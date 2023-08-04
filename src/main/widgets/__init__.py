@@ -489,7 +489,8 @@ class CustomBitmapPanel(wx.Panel):
                  size = wx.DefaultSize, style = 0, name = "CustomBitmapPanel"):
         wx.Panel.__init__(self, parent, id, pos, size, style, name)
         # bitmap的parent采用跟当前对象的parent同一个，是为了避免bitmap改变大小时会影响到其parent的大小
-        self.bitmap = wx.StaticBitmap(parent, id, wx.Bitmap.FromRGBA(1, 1, 0, 0, 0), pos, size, style, name)
+        # 测试发现bitmap改变大小时，parent的大小如果小于bitmap的尺寸，好像是会跟着变大的
+        self.bitmap = wx.StaticBitmap(self, id, wx.Bitmap.FromRGBA(1, 1, 0, 0, 0), pos, size, style, name)
         self.image = image
         self.image_ratio = image_ratio
         self.Rescale(size)
@@ -497,8 +498,7 @@ class CustomBitmapPanel(wx.Panel):
         self.Bind(wx.EVT_SIZE, self.on_size)
 
     def on_size(self, event):
-        size = self.GetSize()
-        self.Rescale(size)
+        self.Rescale(self.GetSize())
         event.Skip()
 
     def Rescale(self, size):
@@ -512,7 +512,8 @@ class CustomBitmapPanel(wx.Panel):
             new_w, new_h = CommonUtils.CalculateNewSizeWithSameRatio(i_size, size_base * (self.image_ratio / 100) / i_size[1])
             image.Rescale(new_w, new_h, wx.IMAGE_QUALITY_NEAREST)
             self.bitmap.SetBitmap(image.ConvertToBitmap())
-
-            new_x = (self_w - new_w) // 2
-            new_y = (self_h - new_h) // 2
+            # 由于bitmap本身的parent不是self，而是跟self一样的self.parent，因此position需要加上self的position才是我们想要的结果
+            new_x, new_y = self.GetPosition()
+            new_x += (self_w - new_w) // 2
+            new_y += (self_h - new_h) // 2
             self.bitmap.SetPosition((new_x, new_y))

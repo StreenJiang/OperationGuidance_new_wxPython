@@ -147,12 +147,12 @@ class WorkplaceView(wx.Panel):
         bar_code_text_font.SetWeight(wx.FONTWEIGHT_BOLD)
         bar_code_text.SetFont(bar_code_text_font)
         # 将输入框加到条码框组件的sizer里
-        self.bar_code_text_control.GetSizer().Add(bar_code_text, proportion = 20, flag = wx.EXPAND)
+        self.bar_code_text_control.GetSizer().Add(bar_code_text, proportion = 20, flag = wx.EXPAND | wx.ALL, border = 1)
         # 为条码框创建扫码小图标
         bar_code_icon_img = wx.Image(PATH_BAR_CODE_ICON, wx.BITMAP_TYPE_ANY)
         bar_code_icon = widgets.CustomBitmapPanel(self.bar_code_text_control, wx.ID_ANY, size = wx.DefaultSize, image = bar_code_icon_img, style = wx.TRANSPARENT_WINDOW)
         # 将扫码小图标加到条码框组件的sizer里
-        self.bar_code_text_control.GetSizer().Insert(0, bar_code_icon, proportion = 1, flag = wx.EXPAND)
+        self.bar_code_text_control.GetSizer().Insert(0, bar_code_icon, proportion = 1, flag = wx.EXPAND | wx.ALL, border = 1)
         # 将子组件存到父组件上
         self.bar_code_text_control.bar_code_text = bar_code_text
         self.bar_code_text_control.bar_code_icon = bar_code_icon
