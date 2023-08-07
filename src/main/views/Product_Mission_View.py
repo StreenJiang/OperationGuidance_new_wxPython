@@ -5,7 +5,7 @@ import wx
 import src.main.widgets as widgets
 import src.main.configs as configs
 from src.main.controllers import apis
-from src.main.utils import CommonUtils
+from src.main.utils import CommonUtils, CacheUtil
 from src.main.views.Content_Workplace import WorkplaceView
 
 # 任务列表展示界面的gridSizer的列数固定为4
@@ -19,36 +19,66 @@ MISSION_ROWS_SCROLL = 3
 
 
 # 产品任务展示界面
-class ProductMissionView(wx.Panel):
+class ProductMissionView(widgets.CustomViewPanel):
     def __init__(self, parent = None, id = wx.ID_ANY,
                  pos = wx.DefaultPosition, size = wx.DefaultSize,
                  style = 0, name = "ProductMissionView"):
-        wx.Panel.__init__(self, parent, id, pos, size, style, name)
+        widgets.CustomViewPanel.__init__(self, parent, id, pos, size, style, name)
+        self.SetBackgroundColour(wx.BLUE)
         self.menu_name = parent.menu_name
         self.call_back_variables = None
-        self.data = None
         self.add_mission_button = None
         self.content_blocks = None
         self.has_scroller = False
         self.size_cache = None
         self.need_redraw = True
 
+        # 数据及缓存相关参数
+        self.data_key = "missions_data"
+        self.data_timeout = 2 # 数据缓存过期时间（秒）
+
         self.parent = self.GetParent()
         self.parent.scroll_bar = None
 
         self.is_painting = False
+        # 由于父类CustomViewPanel绑定了EVT_SIZE事件，如果子类再绑定则会替换掉，父类不再触发该事件，会导致size出错
         self.Bind(wx.EVT_PAINT, self.on_paint)
 
+    # 获取缓存数据
+    def get_data(self):
+        data = CacheUtil.Get(self.data_key)
+        if data is None:
+            # 调用后端API
+            apis.API_GET_PRODUCT_MISSIONS(self)
+            # 从后端返回的数据中提取需要的数据
+            data = self.call_back_variables["data"]
+            # dataTemp = []
+            # 将数据存入缓存
+            CacheUtil.Set(self.data_key, data, timeout = self.data_timeout)
+            # 删除临时参数
+            del self.call_back_variables
+        return data
+
     def on_paint(self, event):
-        if not self.is_painting:
-            # call later
-            self.is_painting = True
-            wx.CallLater(200, self.call_later, event)
+        data = self.get_data()
+        print("on_paint data: ", data)
+
+
+
+
+
+
+        # if not self.is_painting:
+        #     # call later
+        #     self.is_painting = True
+        #     wx.CallLater(200, self.call_later, event)
         event.Skip()
 
     def call_later(self, event):
+        # 经过CallLater异步调用后，event丢失了原本的EventObject，因此需要重新设置一下
+        event.SetEventObject(self)
         # 调用后端API
-        apis.API_GET_PRODUCT_MISSIONS(self, event)
+        apis.API_GET_PRODUCT_MISSIONS(event)
         # 从后端返回的数据中提取需要的数据
         dataTemp = self.call_back_variables["data"]
         # dataTemp = []
@@ -272,8 +302,6 @@ class ProductMissionView(wx.Panel):
                                             size = topParent.GetClientSize(), title = self.menu_name)
         else:
             missionObj.view.Show()
-
-
 
 
 

@@ -1,13 +1,8 @@
-import math
-from typing import TypeVar, Generic, List
+import time
 
 import wx
 
-from src.main.configs import COLOR_BUTTON_FOCUSED
-from src.main.models.ProductMission import ProductMission, ProductSides
-from src.main.models.base import ToolBaseEntity
-import src.main.models.ProductMission as productMission
-
+from src.main.utils import CacheUtil
 
 if __name__ == '__main__':
     app = wx.App()
@@ -98,14 +93,10 @@ if __name__ == '__main__':
     # clist.insert(3, 1)
     # print(clist)
 
-    import pickle
     from PIL import Image
-    import numpy as np
-    import src.main.utils.CommonUtils as CommonUtils
-    from src.main.widgets import *
 
-    img = Image.open("产品图片样图 (1).jpg")
-    print(type(img))
+    # img = Image.open("产品图片样图 (1).jpg")
+    # print(type(img))
     # img_array = np.asarray(img)
     # print(img_array)
     # bitMap = CommonUtils.PILImageToWxBitmap(img)
@@ -115,15 +106,15 @@ if __name__ == '__main__':
     # pilImage = CommonUtils.WxBitmapToPILImage(bitMap)
     # print("type(pilImage): ", type(pilImage))
 
-    wxImage = CommonUtils.PILImageToWxImage(img)
-    print(wxImage)
-    wxBitmap = CommonUtils.PILImageToWxBitmap(img)
-    print(wxBitmap)
-
-    pilImage = CommonUtils.WxImageToPILImage(wxImage)
-    print(pilImage)
-    pilImage = CommonUtils.WxBitmapToPILImage(wxBitmap)
-    print(pilImage)
+    # wxImage = CommonUtils.PILImageToWxImage(img)
+    # print(wxImage)
+    # wxBitmap = CommonUtils.PILImageToWxBitmap(img)
+    # print(wxBitmap)
+    #
+    # pilImage = CommonUtils.WxImageToPILImage(wxImage)
+    # print(pilImage)
+    # pilImage = CommonUtils.WxBitmapToPILImage(wxBitmap)
+    # print(pilImage)
 
 
     #
@@ -204,7 +195,12 @@ if __name__ == '__main__':
     # print(isinstance(4.4, float))
 
 
+    CacheUtil.Set("test", 15, timeout = 8)
 
+    time.sleep(10)
+
+    data = CacheUtil.Get("test")
+    print(data)
 
 
 

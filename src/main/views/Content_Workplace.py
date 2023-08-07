@@ -150,7 +150,7 @@ class WorkplaceView(wx.Panel):
         self.bar_code_text_control.GetSizer().Add(bar_code_text, proportion = 20, flag = wx.EXPAND | wx.ALL, border = 1)
         # 为条码框创建扫码小图标
         bar_code_icon_img = wx.Image(PATH_BAR_CODE_ICON, wx.BITMAP_TYPE_ANY)
-        bar_code_icon = widgets.CustomBitmapPanel(self.bar_code_text_control, wx.ID_ANY, size = wx.DefaultSize, image = bar_code_icon_img, style = wx.TRANSPARENT_WINDOW)
+        bar_code_icon = CustomBitmapPanel(self.bar_code_text_control, wx.ID_ANY, size = wx.DefaultSize, image = bar_code_icon_img, style = wx.TRANSPARENT_WINDOW)
         # 将扫码小图标加到条码框组件的sizer里
         self.bar_code_text_control.GetSizer().Insert(0, bar_code_icon, proportion = 1, flag = wx.EXPAND | wx.ALL, border = 1)
         # 将子组件存到父组件上
@@ -162,7 +162,7 @@ class WorkplaceView(wx.Panel):
                                                        border_color = configs.COLOR_CONTENT_PANEL_INSIDE_BORDER)
         middle_v_box.Add(self.product_image, proportion = 15, flag = wx.EXPAND)
 
-        # 工作状态+工作数据+产品面的sizer
+        # 工作状态+工作数据+产品面的size
         right_v_box = wx.BoxSizer(wx.VERTICAL)
         content_panel_inner_sizer.Add(right_v_box, proportion = 4, flag = wx.EXPAND)
         # 工作状态
@@ -347,3 +347,42 @@ def calculate_content_panel_size(panel_size):
     height = panel_size[1] - int(panel_size[1] * 0.05)
     margin = int(width / 300) + 3
     return (pos_x, pos_y), (width, height), margin
+
+
+# 自定义Panel，这个只显示一个会根据Panel大小和比例参数，自适应改变大小并显示在正中央的bitmap图片
+class CustomBitmapPanel(wx.Panel):
+    def __init__(self, parent, id,
+                 image = None,                      # 这个是wx.Image对象
+                 image_ratio = 90,                  # 这个是图片大小的比例，单位%
+                 pos = wx.DefaultPosition,
+                 size = wx.DefaultSize, style = 0, name = "CustomBitmapPanel"):
+        wx.Panel.__init__(self, parent, id, pos, size, style, name)
+        # bitmap的parent采用跟当前对象的parent同一个，是为了避免bitmap改变大小时会影响到其parent的大小
+        # 测试发现bitmap改变大小时，parent的大小如果小于bitmap的尺寸，好像是会跟着变大的
+        self.bitmap = wx.StaticBitmap(self, id, wx.Bitmap.FromRGBA(1, 1, 0, 0, 0), pos, size, style, name)
+        self.image = image
+        self.image_ratio = image_ratio
+        self.Rescale(size)
+
+        self.Bind(wx.EVT_SIZE, self.on_size)
+
+    def on_size(self, event):
+        self.Rescale(self.GetSize())
+        event.Skip()
+
+    def Rescale(self, size):
+        self_w, self_h = size
+        if self.image is not None and self_w > 0 and self_h > 0:
+            size_base = self_w
+            if size_base > self_h:
+                size_base = self_h
+            image = self.image.Copy()
+            i_size = image.GetSize()
+            new_w, new_h = CommonUtils.CalculateNewSizeWithSameRatio(i_size, size_base * (self.image_ratio / 100) / i_size[1])
+            image.Rescale(new_w, new_h, wx.IMAGE_QUALITY_NEAREST)
+            self.bitmap.SetBitmap(image.ConvertToBitmap())
+            # 由于bitmap本身的parent不是self，而是跟self一样的self.parent，因此position需要加上self的position才是我们想要的结果
+            new_x, new_y = self.GetPosition()
+            new_x += (self_w - new_w) // 2
+            new_y += (self_h - new_h) // 2
+            self.bitmap.SetPosition((new_x, new_y))

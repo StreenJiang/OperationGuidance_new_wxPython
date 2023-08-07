@@ -1,5 +1,6 @@
 import wx
 
+from src.main import widgets
 from src.main.controllers import apis, call_backs
 from src.main.views.Product_Mission_View import ProductMissionView
 
@@ -29,7 +30,7 @@ main_menus_config = [
             {
                 "name": "手动操作",
                 "icon": "configs/icons/manual_manipulate_tool.png",
-                "view": wx.Panel,
+                "view": widgets.CustomViewPanel,
                 "events": {
                     wx.EVT_LEFT_UP: [
                         {
@@ -41,7 +42,7 @@ main_menus_config = [
             }, {
                 "name": "手动控制",
                 "icon": "configs/icons/manual_control.png",
-                "view": wx.Panel,
+                "view": widgets.CustomViewPanel,
                 "events": {
                     wx.EVT_LEFT_UP: [
                         {
@@ -56,7 +57,7 @@ main_menus_config = [
         "id": "00002",
         "name": "任务管理",
         "icon": "configs/icons/mission_management.png",
-        "view": wx.Panel,
+        "view": widgets.CustomViewPanel,
         "enabled": True,
         "events": {
             wx.EVT_LEFT_UP: [
@@ -73,20 +74,13 @@ main_menus_config = [
         "icon": "configs/icons/workplace.png",
         "view": ProductMissionView,
         "enabled": True,
-        "events": {
-            wx.EVT_LEFT_UP: [
-                {
-                    "api": apis.API_GET_PRODUCT_MISSIONS,
-                    "call_back": call_backs.CALL_BACK_SHOW_PRODUCT_MISSIONS
-                },
-            ],
-        },
+        "events": {},
         "children": []
     }, {
         "id": "00004",
         "name": "数据查询",
         "icon": "configs/icons/data_query.png",
-        "view": wx.Panel,
+        "view": widgets.CustomViewPanel,
         "enabled": True,
         "events": {
             wx.EVT_LEFT_UP: [
@@ -101,7 +95,7 @@ main_menus_config = [
         "id": "00005",
         "name": "事件日志",
         "icon": "configs/icons/event_log.png",
-        "view": wx.Panel,
+        "view": widgets.CustomViewPanel,
         "enabled": True,
         "events": {
             wx.EVT_LEFT_UP: [
@@ -130,7 +124,7 @@ main_menus_config = [
             {
                 "name": "账户管理",
                 "icon": "configs/icons/user_info.png",
-                "view": wx.Panel,
+                "view": widgets.CustomViewPanel,
                 "events": {
                     wx.EVT_LEFT_UP: [
                         {
@@ -142,7 +136,7 @@ main_menus_config = [
             }, {
                 "name": "站点配置",
                 "icon": "configs/icons/station_settings.png",
-                "view": wx.Panel,
+                "view": widgets.CustomViewPanel,
                 "events": {
                     wx.EVT_LEFT_UP: [
                         {
@@ -154,7 +148,7 @@ main_menus_config = [
             }, {
                 "name": "通讯设备",
                 "icon": "configs/icons/communication_device.png",
-                "view": wx.Panel,
+                "view": widgets.CustomViewPanel,
                 "events": {
                     wx.EVT_LEFT_UP: [
                         {
@@ -166,7 +160,7 @@ main_menus_config = [
             }, {
                 "name": "串口设备",
                 "icon": "configs/icons/serial_port_device.png",
-                "view": wx.Panel,
+                "view": widgets.CustomViewPanel,
                 "events": {
                     wx.EVT_LEFT_UP: [
                         {
@@ -178,7 +172,7 @@ main_menus_config = [
             }, {
                 "name": "存储参数",
                 "icon": "configs/icons/store_variables.png",
-                "view": wx.Panel,
+                "view": widgets.CustomViewPanel,
                 "events": {
                     wx.EVT_LEFT_UP: [
                         {
@@ -190,7 +184,7 @@ main_menus_config = [
             }, {
                 "name": "开发者选项",
                 "icon": "configs/icons/developer_choices.png",
-                "view": wx.Panel,
+                "view": widgets.CustomViewPanel,
                 "events": {
                     wx.EVT_LEFT_UP: [
                         {
@@ -202,7 +196,7 @@ main_menus_config = [
             }, {
                 "name": "软件许可",
                 "icon": "configs/icons/software_license.png",
-                "view": wx.Panel,
+                "view": widgets.CustomViewPanel,
                 "events": {
                     wx.EVT_LEFT_UP: [
                         {
@@ -214,6 +208,7 @@ main_menus_config = [
             }, {
                 "name": "系统设置",
                 "icon": "configs/icons/variable_settings.png",
+                "view": None,
                 "events": {},
             },
         ]
@@ -221,7 +216,7 @@ main_menus_config = [
         "id": "00007",
         "name": "用户信息",
         "icon": "configs/icons/user_info.png",
-        "view": wx.Panel,
+        "view": widgets.CustomViewPanel,
         "enabled": True,
         "events": {
             wx.EVT_LEFT_UP: [

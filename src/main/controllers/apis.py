@@ -37,11 +37,10 @@ def API_EVT_MOUSE_EVENTS_TEST(event):
 
 
 # 工作台：获取任务（产品）列表
-def API_GET_PRODUCT_MISSIONS(event):
-    event_obj = event.GetEventObject()
+def API_GET_PRODUCT_MISSIONS(obj):
     # TODO: get missions data from back-end api(s)
     # 这里先暂时手写，之后要调用后端api，让后端返回
-    event_obj.call_back_variables = {
+    obj.call_back_variables = {
         "data": [
             productMission.ProductMission(
                 id = 1, mission_name = "OP-10机盖装配", mission_pn_code = "12345678",

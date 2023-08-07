@@ -9,37 +9,6 @@ from src.main.exceptions.Custom_Exception import LengthTooLongException
 from src.main.utils import CommonUtils
 
 
-# 主菜单容纳按钮的panel组件
-class MainMenuPanel(wx.Panel):
-    def __init__(self, parent, id = wx.ID_ANY, background_color = "#000000",
-                 pos = wx.DefaultPosition, size = wx.DefaultSize, style = 0, name = "CustomMenuButton"):
-        wx.Panel.__init__(self, parent, id, pos = pos, size = size, style = style, name = name)
-        self.SetBackgroundColour(background_color)
-        self.buttons = []
-        self.Bind(wx.EVT_SIZE, self.on_size)
-
-    def on_size(self, event):
-        width, height = self.GetParent().GetSize()
-        self.SetSize(len(self.buttons) * height, height)
-        event.Skip()
-
-
-# 子菜单容纳按钮的panel组件
-class ChildMenuPanel(wx.Panel):
-    def __init__(self, parent, id = wx.ID_ANY, background_color = "#000000",
-                 pos = wx.DefaultPosition, size = wx.DefaultSize, style = 0, name = "CustomMenuButton"):
-        wx.Panel.__init__(self, parent, id, pos = pos, size = size, style = style, name = name)
-        self.SetBackgroundColour(background_color)
-        self.buttons = []
-        self.Bind(wx.EVT_SIZE, self.on_size)
-
-    def on_size(self, event):
-        width, height = self.GetParent().GetSize()
-        button_height = math.floor(height * 0.07)
-        self.SetSize(width, len(self.buttons) * button_height)
-        event.Skip()
-
-
 # CustomGenBitmapTextToggleButton： custom_style
 BUTTON_STYLE_HORIZONTAL = 1
 BUTTON_STYLE_VERTICAL = 2
@@ -50,12 +19,14 @@ class CustomGenBitmapTextToggleButton(buttons.GenBitmapTextToggleButton):
                  is_toggled = False, pos = wx.DefaultPosition, size = wx.DefaultSize,
                  style = 0, validator = wx.DefaultValidator, custom_style = BUTTON_STYLE_HORIZONTAL,
                  name = "CustomGenBitmapTextToggleButton"):
+        # 按钮的中文文本的长度校验
         if custom_style == BUTTON_STYLE_VERTICAL and len(label) > configs.LENGTH_MAIN_MENU:
             raise LengthTooLongException("Length of main menu label[%s] too long, no more than %d" % (label, configs.LENGTH_MAIN_MENU))
         elif len(label) > configs.LENGTH_CHILD_MENU:
             raise LengthTooLongException("Length of child menu label[%s] too long, no more than %d" % (label, configs.LENGTH_CHILD_MENU))
-
+        # 调用父类的构造函数
         buttons.GenBitmapButton.__init__(self, parent, id, bitmap, pos, size, style, validator, name)
+        # 初始化实例变量
         self.label_color = label_color
         self.is_toggled = is_toggled
         self.SetLabel(label)
@@ -65,6 +36,7 @@ class CustomGenBitmapTextToggleButton(buttons.GenBitmapTextToggleButton):
         self.SetBackgroundColour(background_color)
         # 按钮激活时的颜色（初始化配置的，这个是固定的）
         self.toggle_color = toggle_color
+        self.background_color = background_color
 
         # 设置初始状态
         self.SetToggle(is_toggled)
@@ -76,18 +48,18 @@ class CustomGenBitmapTextToggleButton(buttons.GenBitmapTextToggleButton):
         self.Bind(wx.EVT_LEFT_UP, self.process_parent_event)
         self.Bind(wx.EVT_MOTION, self.process_parent_event)
 
+    # 调用父类对应的事件（因为这个按钮组件其实是真正的自定义按钮组件（一个panel假装的）的内部组件，
+    # 正常情况下会在父组件的上方，因此事件触发基本上都是触发此对象，而实际代码逻辑中绑定时都是绑定父对象，因此要向上传递
     def process_parent_event(self, event):
         event.SetEventObject(self.GetParent())
         self.GetParent().GetEventHandler().ProcessEvent(event)
         event.Skip()
 
-    # def SetBackgroundColour(self, colour):
-    #     super().SetBackgroundColour(colour)
-    #     self.Refresh()
-
     def SetToggle(self, flag):
         if flag:
             self.SetBackgroundColour(self.toggle_color)
+        else:
+            self.SetBackgroundColour(self.background_color)
         super().SetToggle(flag)
 
     def GetLabel(self):
@@ -101,12 +73,10 @@ class CustomGenBitmapTextToggleButton(buttons.GenBitmapTextToggleButton):
         y2 = height - 1
         dc = wx.PaintDC(self)
         brush = self.GetBackgroundBrush(dc)
-
-        # 这里加了一行代码：让背景画刷跟背景颜色一致（不知道为啥这个颜色默认是不一样的）
-        # 这个颜色会在按钮被按住时显示出来，然后会发现跟本身的背景颜色不一样
-        brush.SetColour(self.GetBackgroundColour())
-
         if brush is not None:
+            # 这里加了一行代码：让背景画刷跟背景颜色一致（不知道为啥这个颜色默认是不一样的）
+            # 这个颜色会在按钮被按住时显示出来，然后会发现跟本身的背景颜色不一样
+            brush.SetColour(self.GetBackgroundColour())
             dc.SetBackground(brush)
             dc.Clear()
         self.DrawBezel(dc, x1, y1, x2, y2)
@@ -227,7 +197,8 @@ class CustomMenuButton(wx.Panel):
         self.s_toggle_color = None
 
         if is_toggled and need_trigger_bar:
-            self.SetBackgroundColour(label_color)
+            self.SetToggle(is_toggled)
+            # self.SetBackgroundColour(label_color)
             self.leave_color = toggle_color
 
         self.SetLabel(label)
@@ -544,8 +515,8 @@ class CustomBorderPanel(wx.Panel):
                                          border_color = border_color, margin = margin, radius = radius,
                                          border_extra = border_extra)
         self.sizer = wx.StaticBoxSizer(self.staticBox, wx.HORIZONTAL)
-        # wx.Panel.SetSizer(self, self.sizer)
-        self.SetSizer(self.sizer)
+        # 这里将sizer设置到父类中，因为这个panel需要固定的内边框
+        super().SetSizer(self.sizer)
 
         self.border_thickness = border_thickness
         self.border_color = border_color
@@ -563,8 +534,13 @@ class CustomBorderPanel(wx.Panel):
         self.SetMargin(margin + 3)
         event.Skip()
 
-    # def SetSizer(self, sizer, deleteOld = True):
-    #     self.sizer.Add(sizer, deleteOld)
+    # 重写SetSizer以支持对Panel本身设置Sizer
+    def SetSizer(self, sizer, deleteOld = True):
+        self.sizer.Add(sizer, 1, wx.EXPAND)
+
+    # 重写GetSizer，返回Panel本身的Sizer而不是static box sizer
+    def GetSizer(self):
+        return self.sizer.GetChildren()[0]
 
     def SetBorderThickness(self, border_thickness):
         self.border_thickness = border_thickness
@@ -578,6 +554,9 @@ class CustomBorderPanel(wx.Panel):
         self.margin = margin
         self.staticBox.SetMargin(margin)
 
+    def GetMargin(self):
+        return self.margin
+
     def SetBordersForSizer(self, border_extra):
         self.border_extra = border_extra
         self.staticBox.SetBordersForSizer(border_extra)
@@ -589,40 +568,27 @@ class CustomBorderPanel(wx.Panel):
         return self.staticBox.GetBordersForSizer()
 
 
-# 自定义Panel，这个只显示一个会根据Panel大小和比例参数，自适应改变大小并显示在正中央的bitmap图片
-class CustomBitmapPanel(wx.Panel):
-    def __init__(self, parent, id,
-                 image = None,                      # 这个是wx.Image对象
-                 image_ratio = 90,                  # 这个是图片大小的比例，单位%
-                 pos = wx.DefaultPosition,
-                 size = wx.DefaultSize, style = 0, name = "CustomBitmapPanel"):
+# 自定义的view_panel，可以设定margin（外边距）
+class CustomViewPanel(wx.Panel):
+    def __init__(self, parent, id = -1, pos = wx.DefaultPosition, size = wx.DefaultSize,
+                 style = 0, name = "CustomViewPanel", margin = 0):
         wx.Panel.__init__(self, parent, id, pos, size, style, name)
-        # bitmap的parent采用跟当前对象的parent同一个，是为了避免bitmap改变大小时会影响到其parent的大小
-        # 测试发现bitmap改变大小时，parent的大小如果小于bitmap的尺寸，好像是会跟着变大的
-        self.bitmap = wx.StaticBitmap(self, id, wx.Bitmap.FromRGBA(1, 1, 0, 0, 0), pos, size, style, name)
-        self.image = image
-        self.image_ratio = image_ratio
-        self.Rescale(size)
-
+        self.margin = margin
         self.Bind(wx.EVT_SIZE, self.on_size)
 
     def on_size(self, event):
-        self.Rescale(self.GetSize())
+        size = self.GetSize()
+        size -= (self.margin * 4, self.margin * 4)
+        position = self.GetPosition()
+        position += (self.margin * 2, self.margin * 2)
+        self.SetSize(size)
+        self.SetPosition(position)
+        self.Refresh()
         event.Skip()
 
-    def Rescale(self, size):
-        self_w, self_h = size
-        if self.image is not None and self_w > 0 and self_h > 0:
-            size_base = self_w
-            if size_base > self_h:
-                size_base = self_h
-            image = self.image.Copy()
-            i_size = image.GetSize()
-            new_w, new_h = CommonUtils.CalculateNewSizeWithSameRatio(i_size, size_base * (self.image_ratio / 100) / i_size[1])
-            image.Rescale(new_w, new_h, wx.IMAGE_QUALITY_NEAREST)
-            self.bitmap.SetBitmap(image.ConvertToBitmap())
-            # 由于bitmap本身的parent不是self，而是跟self一样的self.parent，因此position需要加上self的position才是我们想要的结果
-            new_x, new_y = self.GetPosition()
-            new_x += (self_w - new_w) // 2
-            new_y += (self_h - new_h) // 2
-            self.bitmap.SetPosition((new_x, new_y))
+    def SetMargin(self, margin):
+        self.margin = margin
+        self.Refresh()
+
+    def GetMargin(self):
+        return self.margin
