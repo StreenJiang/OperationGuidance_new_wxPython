@@ -195,12 +195,15 @@ if __name__ == '__main__':
     # print(isinstance(4.4, float))
 
 
-    CacheUtil.Set("test", 15, timeout = 8)
+    # CacheUtil.Set("test", 15, timeout = 8)
+    #
+    # time.sleep(10)
+    #
+    # data = CacheUtil.Get("test")
+    # print(data)
 
-    time.sleep(10)
+    grid_sizer = wx.GridSizer(cols = 5)
 
-    data = CacheUtil.Get("test")
-    print(data)
 
 
 

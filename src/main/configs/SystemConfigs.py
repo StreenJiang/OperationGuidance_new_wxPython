@@ -208,7 +208,7 @@ main_menus_config = [
             }, {
                 "name": "系统设置",
                 "icon": "configs/icons/variable_settings.png",
-                "view": None,
+                "view": widgets.CustomViewPanel,
                 "events": {},
             },
         ]

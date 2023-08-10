@@ -6,7 +6,6 @@ from src.main import widgets
 import src.main.configs as configs
 import src.main.controllers as controller
 from src.main.configs import SystemConfigs
-from src.main.utils import CommonUtils
 
 
 # 主窗体类
@@ -46,9 +45,7 @@ class MainFrame(wx.Frame):
         # 主菜单panel窗体拖动逻辑
         self.main_menu_panel.mouse_pos = None  # 初始化鼠标定位参数
         self.window_drag_flag = False
-        self.main_menu_panel.Bind(wx.EVT_MOTION, self.window_dragging)
-        self.main_menu_panel.Bind(wx.EVT_LEFT_DOWN, self.window_dragging_mouse_l_down)
-        self.main_menu_panel.Bind(wx.EVT_LEFT_UP, self.window_dragging_mouse_l_up)
+        self.bind_dragging_event(self.main_menu_panel)
 
         # 主体内容panel
         self.content_outer_panel = wx.Panel(self.main_panel, wx.ID_ANY)
@@ -64,7 +61,7 @@ class MainFrame(wx.Frame):
 
         # 给主窗口绑定【窗口大小变化】事件，确保不同分辨率下，系统UI始终保持最佳比例
         self.is_resizing = False
-        self.Bind(wx.EVT_SIZE, self.main_frame_resizing)
+        self.Bind(wx.EVT_SIZE, self.main_frame_on_size)
 
         # 给主窗口及其所有的子组件添加鼠标点击及松开事件
         self.mouse_down = False
@@ -119,9 +116,7 @@ class MainFrame(wx.Frame):
 
                 # 绑定事件
                 btn_temp.Bind(wx.EVT_LEFT_UP, self.main_menu_toggled)
-                btn_temp.Bind(wx.EVT_MOTION, self.window_dragging)
-                btn_temp.Bind(wx.EVT_LEFT_DOWN, self.window_dragging_mouse_l_down)
-                btn_temp.Bind(wx.EVT_LEFT_UP, self.window_dragging_mouse_l_up)
+                self.bind_dragging_event(btn_temp)
 
                 # 将后续需要用的配置信息存到对象上
                 btn_temp.bgColor = configs.COLOR_MENU_BUTTON_BACKGROUND
@@ -135,50 +130,16 @@ class MainFrame(wx.Frame):
                 if btn_temp.viewPanel is None and len(btn_temp.childrenMenus) == 0:
                     btn_temp.is_functional_button = True
 
-
-                #
-                # if btn_temp.view is not None or len(btn_temp.childrenMenus) > 0:
-                #     # 将每个菜单的内容页容器绑定到菜单按钮上
-                #     content_panel_pos, content_panel_size, content_panel_margin = calculate_content_panel_size(self.GetClientSize(), len(btn_temp.childrenMenus) > 0)
-                #     btn_temp.content_panel = widgets.CustomBorderPanel(self.main_panel, wx.ID_ANY, pos = content_panel_pos, size = content_panel_size,
-                #                                                        border_thickness = 1, border_color = configs.COLOR_CONTENT_PANEL_INSIDE_BORDER,
-                #                                                        margin = content_panel_margin, radius = 0)
-                #     btn_temp.content_panel.SetBackgroundColour(configs.COLOR_CONTENT_PANEL_BACKGROUND)
-                #
-                #     # 绘制内容页panel的内容
-                #     self.draw_content_panel(btn_temp, content_panel_size)
-                #
-                #     # 初始化子菜单
-                #     btn_temp.child_menu_panel = None
-                #     btn_temp.child_menus = []
-                #
-                #     # 将主菜单的子菜单添加到子菜单panel中
-                #     self.add_child_menus(btn_temp)
-                #
-                #     # 如果是第一个按钮，则程序启动时默认是触发状态
-                #     if index == 0:
-                #         self.current_main_menu = btn_temp
-                #         btn_temp.SetToggle(True)
-                #         btn_temp.SetBackgroundColour(btn_temp.toggledColor)
-                #
-                #         # 展示当前的内容页
-                #         btn_temp.content_panel.Show(True)
-                #
-                #         # 当前第一个按钮默认触发
-                #         if len(btn_temp.child_menus) > 0:
-                #             btn_temp.child_menu_panel.Show(True)
-                #             self.current_child_menu = btn_temp.child_menus[0]
-                #             self.current_child_menu.SetToggle(True)
-                #             self.current_child_menu.SetBackgroundColour(self.current_child_menu.toggledColor)
-                #     else:
-                #         btn_temp.content_panel.Show(False)
                 index += 1
                 # 将按钮对象加入到list中以方便后续操作
                 self.main_menus.append(btn_temp)
 
         # 添加logo图片
-        logo_panel = LogoPanel(self.main_menu_panel, wx.ID_ANY)
+        logo_panel = widgets.LogoPanel(self.main_menu_panel, wx.ID_ANY)
         main_menu_panel_sizer.Add(logo_panel, 1, wx.EXPAND)
+
+        # 绑定事件
+        self.bind_dragging_event(logo_panel)
 
         self.main_menu_panel.Layout()
         self.main_menu_panel.button_panel = button_panel
@@ -252,7 +213,7 @@ class MainFrame(wx.Frame):
 
                     # 给每个子菜单创建对应的content_panel
                     child_content_panel = widgets.CustomBorderPanel(child_content_outer_panel, wx.ID_ANY, border_thickness = 1,
-                                                                    border_color = configs.COLOR_CONTENT_PANEL_INSIDE_BORDER)
+                                                                    border_color = configs.COLOR_CONTENT_PANEL_INSIDE_BORDER, self_adaptive = True)
                     child_content_panel.SetBackgroundColour(configs.COLOR_CONTENT_PANEL_BACKGROUND)
                     child_content_outer_panel_sizer.Add(child_content_panel, 1, wx.EXPAND)
 
@@ -275,7 +236,7 @@ class MainFrame(wx.Frame):
             elif main_menu_btn.viewPanel is not None:
                 # 给主菜单创建对应的content_panel
                 main_content_panel = widgets.CustomBorderPanel(main_menu_btn_content_panel, wx.ID_ANY, border_thickness = 1,
-                                                               border_color = configs.COLOR_CONTENT_PANEL_INSIDE_BORDER)
+                                                               border_color = configs.COLOR_CONTENT_PANEL_INSIDE_BORDER, self_adaptive = True)
                 main_content_panel.SetBackgroundColour(configs.COLOR_CONTENT_PANEL_BACKGROUND)
                 main_menu_btn_content_panel_sizer.Add(main_content_panel, 1, wx.EXPAND)
 
@@ -308,18 +269,11 @@ class MainFrame(wx.Frame):
         if menu_button.viewPanel is not None:
             # 创建视图并绑定专属的on_size事件
             view = menu_button.viewPanel(content_panel, wx.ID_ANY)
-            view.Bind(wx.EVT_SIZE, self.view_on_size)
             # 添加到布局中并刷新布局
             sizer.Add(view, 1, wx.EXPAND)
             content_panel.Layout()
             # 将view存到按钮对象中
             menu_button.view = view
-
-    # 视图专属的on_size事件，用于平衡margin
-    def view_on_size(self, event):
-        view = event.GetEventObject()
-        view.SetMargin(view.GetParent().GetMargin())
-        event.Skip()
 
     # 主菜单点击事件 - 释放
     def main_menu_toggled(self, event):
@@ -392,10 +346,15 @@ class MainFrame(wx.Frame):
         event.Skip()
 
     # 主窗口大小变化时，所有界面元素都需要调整
-    def main_frame_resizing(self, event):
-        print("Resizing frame, Resolution: ", self.GetClientSize())
-        self.main_panel.Layout()
+    def main_frame_on_size(self, event):
+        wx.CallAfter(self.layout_after)
         event.Skip()
+
+    def layout_after(self):
+        print("main_frame_on_size, Resolution: ", self.GetClientSize())
+        self.main_panel.SetSize(self.GetClientSize())  # hide之后再show不知道为啥不跟着self一起变了，直接设置吧
+        # 必须要稍稍滞后，不然不咋生效
+        self.main_panel.Layout()
 
     # 窗体拖拽事件 - 重新定位窗体位置
     def window_dragging(self, event):
@@ -427,65 +386,11 @@ class MainFrame(wx.Frame):
     def show_all(self, flag: bool = True):
         self.main_panel.Show(flag)
 
-# 计算主菜单panel的尺寸和位置
-def calculate_main_menu_panel_size(panel_size):
-    pos_x = 0
-    pos_y = 0
-    width = panel_size[0]
-    height = int(panel_size[1] * 0.12)
-    return (pos_x, pos_y), (width, height)
-
-
-# 计算主菜单按钮的尺寸和位置
-def calculate_main_menu_button_size(panel_size, btn_index):
-    pos_x = btn_index * int(0.12 * panel_size[1])
-    pos_y = 0
-    width = int(0.12 * panel_size[1])
-    height = int(0.12 * panel_size[1])
-    return (pos_x, pos_y), (width, height)
-
-
-# 计算内容panel的尺寸和位置
-def calculate_content_panel_size(panel_size, has_children):
-    pos_x = 0
-    pos_y = int(panel_size[1] * 0.12)
-    width = panel_size[0]
-    height = panel_size[1] - int(0.12 * panel_size[1])
-
-    if has_children:
-        pos_x = int(0.11 * panel_size[0])
-        width = panel_size[0] - int(0.11 * panel_size[0])
-
-    margin = int(width / 300) + 3
-    return (pos_x, pos_y), (width, height), margin
-
-
-# 计算子菜单panel的尺寸和位置
-def calculate_child_menu_panel_size(panel_size):
-    # 这里的x是0的原因是，这个panel是在content_panel里面的，所以是一个相对坐标
-    pos_x = 0
-    pos_y = int(0.12 * panel_size[1])
-    width = int(0.11 * panel_size[0])
-    height = panel_size[1] - int(0.12 * panel_size[1])
-    return (pos_x, pos_y), (width, height)
-
-
-# 计算子菜单按钮的尺寸和位置
-def calculate_child_menu_button_size(panel_size, btn_index):
-    pos_x = 0
-    pos_y = btn_index * int(0.07 * panel_size[1])
-    width = int(0.11 * panel_size[0])
-    height = int(0.07 * panel_size[1])
-    return (pos_x, pos_y), (width, height)
-
-
-# 计算logo图片的尺寸和位置
-def calculate_logo_img_size(panel_size, logo_img_size):
-    width, height = CommonUtils.CalculateNewSizeWithSameRatio(logo_img_size, panel_size[1] * 0.6 / logo_img_size[1])
-    pos_x = panel_size[0] - width - 5
-    pos_y = (panel_size[1] - height) / 2
-    return (pos_x, pos_y), (width, height)
-
+    # 给组件绑定所有窗体拖拽事件
+    def bind_dragging_event(self, widget_obj):
+        widget_obj.Bind(wx.EVT_MOTION, self.window_dragging)
+        widget_obj.Bind(wx.EVT_LEFT_DOWN, self.window_dragging_mouse_l_down)
+        widget_obj.Bind(wx.EVT_LEFT_UP, self.window_dragging_mouse_l_up)
 
 # 主菜单容纳按钮的panel组件
 class MainMenuPanel(wx.Panel):
@@ -498,6 +403,9 @@ class MainMenuPanel(wx.Panel):
     def on_size(self, event):
         width, height = self.GetParent().GetSize()
         self.SetSize(len(self.buttons) * height, height)
+
+        # 刷新一下布局
+        self.Layout()
         event.Skip()
 
 
@@ -513,46 +421,8 @@ class ChildMenuPanel(wx.Panel):
         width, height = self.GetParent().GetSize()
         button_height = math.floor(height * 0.08)
         self.SetSize(width, len(self.buttons) * button_height)
-        event.Skip()
-
-
-# 主菜单panel里的logo组件
-class LogoPanel(wx.Panel):
-    def __init__(self, parent, id = wx.ID_ANY, pos = wx.DefaultPosition,
-                 size = wx.DefaultSize, style = 0, name = "CustomMenuButton"):
-        wx.Panel.__init__(self, parent, id, pos = pos, size = size, style = style, name = name)
-        self.logo_img_png = wx.Image(configs.PATH_LOGO_IMAGE, wx.BITMAP_TYPE_ANY)
-        self.logo_img_static = wx.StaticBitmap(self, wx.ID_ANY, self.logo_img_png.ConvertToBitmap())
-
-        # 添加一个sizer让图片右对齐
-        self.sizer = wx.BoxSizer(wx.VERTICAL) # 由于右对齐对水平sizer不生效因此加一个垂直sizer
-        self.sizer.Add(self.logo_img_static, 1, wx.RIGHT | wx.ALIGN_RIGHT, border = 5)
-        self.SetSizer(self.sizer)
-        self.Layout()
-
-        # 绑定on_size事件
-        self.Bind(wx.EVT_SIZE, self.on_size)
-
-    def on_size(self, event):
-        # 复制一个wx.Image，以免多次Rescale导致图片失真
-        log_temp = self.logo_img_png.Copy()
-
-        # 重新根据当前父panel的size计算新的图片size及图片右边的border
-        logo_img_width, logo_img_height, border = self.calculate_logo_img_size()
-        log_temp.Rescale(logo_img_width, logo_img_height, wx.IMAGE_QUALITY_BILINEAR)
-
-        # 设置新的bitmap
-        self.logo_img_static.SetBitmap(log_temp.ConvertToBitmap())
-        # 设定新的border
-        self.sizer.GetChildren()[0].SetBorder(border)
 
         # 刷新一下布局
         self.Layout()
         event.Skip()
 
-    # 重新根据当前父panel的size计算新的图片size及图片右边的border
-    def calculate_logo_img_size(self):
-        p_width, p_height = self.GetParent().GetSize()
-        img_size = self.logo_img_png.GetSize()
-        width, height = CommonUtils.CalculateNewSizeWithSameRatio(img_size, p_height * 0.7 / img_size[1])
-        return width, height, p_width / 200

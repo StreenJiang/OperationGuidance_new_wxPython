@@ -5,10 +5,9 @@ import wx
 from src.main import configs, widgets
 from src.main.utils import CommonUtils
 
-
 # 返回按钮的TEXT
 BACK_BUTTON_TEXT = "返回"
-# 条码框的icon图片存储路径
+# 条码框的扫码icon图片存储路径
 PATH_BAR_CODE_ICON = "configs/icons/bar_code_icon.png"
 
 
@@ -19,7 +18,6 @@ class WorkplaceView(wx.Panel):
         wx.Panel.__init__(self, parent, id, pos, size, style, name)
         self.top_parent = CommonUtils.GetTopParent(self)
         self.title = title
-        main_sizer = wx.BoxSizer(wx.VERTICAL)
 
         # 主要的两个panel，一个顶部菜单条panel、一个下面的内容主体panel
         self.top_menu_bar_panel = None
@@ -27,8 +25,8 @@ class WorkplaceView(wx.Panel):
 
         # 菜单条里的组件
         self.back_button = None
-        self.main_menu_name = None
-        self.logo_img_static = None
+        self.middle_text_panel = None
+        self.logo_img_panel = None
 
         # 内容主体panel内的组件
         self.devices = None
@@ -41,124 +39,110 @@ class WorkplaceView(wx.Panel):
         # 窗体拖拽标识
         self.window_drag_flag = False
 
-        # 添加顶部菜单条panel及其子组件
-        self.add_top_menu_bar()
-
-        # 添加下方内容主体panel及其子组件
-        self.add_content_panel()
-
-        # 给主窗口绑定【窗口大小变化】事件，确保不同分辨率下，系统UI始终保持最佳比例
-        self.is_resizing = False
-        self.top_parent.Bind(wx.EVT_SIZE, self.main_frame_resizing)
-
-        main_sizer.Add(self.top_menu_bar_panel)
-        main_sizer.Add(self.content_panel)
-        # 设置sizer
-        self.SetSizerAndFit(main_sizer)
-
-    # 添加顶部菜单条及其子组件
-    def add_top_menu_bar(self):
         # 顶部菜单条组件
-        top_menu_bar_panel_pos, top_menu_bar_panel_size = calculate_top_menu_bar_panel_size(self.GetClientSize())
-        self.top_menu_bar_panel = wx.Panel(self, wx.ID_ANY, pos = top_menu_bar_panel_pos, size = top_menu_bar_panel_size)
+        self.top_menu_bar_panel = wx.Panel(self, wx.ID_ANY)
         self.top_menu_bar_panel.SetBackgroundColour(configs.COLOR_MENU_BACKGROUND)
         # 窗体拖动逻辑
         self.top_menu_bar_panel.mouse_pos = None  # 初始化鼠标定位参数
         self.bind_dragging_event(self.top_menu_bar_panel)
+        # 设置顶部菜单条大小和位置
+        bar_size, bar_pos = self.calc_menu_bar()
+        self.top_menu_bar_panel.SetSize(bar_size)
+        self.top_menu_bar_panel.SetPosition(bar_pos)
+        # 添加顶部菜单条panel子组件
+        self.add_top_menu_bar_child_widgets()
 
-        # 给顶部菜单条panel添加子组件
-        self.add_top_menu_bar_child_widgets(top_menu_bar_panel_size)
+        # 添加一个灰色框框的内容主体panel
+        self.content_panel = ContentPanel(self, wx.ID_ANY, border_thickness = 1, border_color = configs.COLOR_CONTENT_PANEL_INSIDE_BORDER)
+        self.content_panel.SetBackgroundColour(configs.COLOR_CONTENT_PANEL_BACKGROUND)
+        # 设置内容主体panel大小和位置
+        pan_size, pan_pos = self.calc_content_panel()
+        self.content_panel.SetSize(pan_size)
+        self.content_panel.SetPosition(pan_pos)
+        # 添加下方内容主体panel及其子组件
+        self.add_content_panel_child_widgets()
+
+        # 给主窗口绑定【窗口大小变化】事件，确保不同分辨率下，系统UI始终保持最佳比例
+        self.is_resizing = False
+        self.top_parent.Bind(wx.EVT_SIZE, self.main_frame_resizing)
+        self.Bind(wx.EVT_SIZE, self.on_size)
+
+        # 刷新布局
+        self.Refresh()
 
     # 给顶部菜单条panel添加子组件
-    def add_top_menu_bar_child_widgets(self, top_menu_bar_panel_size):
+    def add_top_menu_bar_child_widgets(self):
+        # 设置sizer
+        top_menu_bar_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.top_menu_bar_panel.SetSizer(top_menu_bar_sizer)
+
         # 添加返回按钮组件
-        back_button_pos, back_button_size = calculate_top_menu_bar_button_size(top_menu_bar_panel_size)
-        self.back_button = widgets.CustomRadiusButton(
-            self.top_menu_bar_panel,
-            wx.ID_ANY,
-            label = BACK_BUTTON_TEXT,
-            font_color = configs.COLOR_BUTTON_TEXT,
-            background_color = configs.COLOR_BUTTON_BACKGROUND,
-            clicked_color = configs.COLOR_BUTTON_FOCUSED,
-            button_size_type = widgets.BUTTON_SIZE_TYPE_NORMAL,
-            pos = back_button_pos,
-            size = back_button_size
-        )
-        # 绑定返回按钮事件
+        self.back_button = BackButton(self.top_menu_bar_panel,
+                                      wx.ID_ANY,
+                                      label = BACK_BUTTON_TEXT,
+                                      font_color = configs.COLOR_BUTTON_TEXT,
+                                      background_color = configs.COLOR_BUTTON_BACKGROUND,
+                                      clicked_color = configs.COLOR_BUTTON_FOCUSED,
+                                      button_size_type = widgets.BUTTON_SIZE_TYPE_NORMAL,
+                                      radius = 2)
+        # 绑定事件
         self.back_button.Bind(wx.EVT_LEFT_UP, self.back_button_toggled)
         self.bind_dragging_event(self.back_button)
+        # 设置sizer
+        v_back = wx.BoxSizer(wx.VERTICAL)
+        v_back.Add(self.back_button, 1, wx.ALIGN_LEFT)
+        top_menu_bar_sizer.Add(v_back, 1, wx.EXPAND | wx.TOP | wx.LEFT, 3)
 
         # 添加菜单名称显示组件
-        self.main_menu_name = wx.StaticText(self.top_menu_bar_panel, wx.ID_ANY, label = self.title, style = wx.ALIGN_CENTRE_HORIZONTAL)
-        self.main_menu_name.SetForegroundColour(configs.COLOR_MAIN_MENU_TEXT)
-        font_temp = self.main_menu_name.GetFont()
-        font_size = calculate_top_menu_bar_title_font_size(top_menu_bar_panel_size)
-        font_temp.SetWeight(wx.FONTWEIGHT_BOLD)
-        font_temp.SetPointSize(font_size)
-        self.main_menu_name.SetFont(font_temp)
-        main_menu_name_pos = calculate_top_menu_bar_title_pos(top_menu_bar_panel_size, self.main_menu_name.GetSize())
-        self.main_menu_name.SetPosition(main_menu_name_pos)
-        # 绑定菜单名称事件
-        self.bind_dragging_event(self.main_menu_name)
+        self.middle_text_panel = MiddleTextPanel(self.top_menu_bar_panel, wx.ID_ANY, label = self.title, style = wx.ALIGN_CENTRE_HORIZONTAL)
+        # 绑定事件
+        self.bind_dragging_event(self.middle_text_panel)
+        # 设置sizer
+        top_menu_bar_sizer.Add(self.middle_text_panel, 1, wx.EXPAND)
 
-        # 添加logo图片
-        logo_img_png = wx.Image(configs.PATH_LOGO_IMAGE, wx.BITMAP_TYPE_ANY)
-        logo_img_pos, logo_img_size = calculate_logo_img_size(self.top_menu_bar_panel.GetSize(),
-                                                              logo_img_png.GetSize())
-        logo_img_png.Rescale(logo_img_size[0], logo_img_size[1], wx.IMAGE_QUALITY_BILINEAR)
-        self.logo_img_static = wx.StaticBitmap(self.top_menu_bar_panel, -1, logo_img_png.ConvertToBitmap())
-        self.logo_img_static.SetPosition(logo_img_pos)
-        # 绑定logo图片事件
-        self.bind_dragging_event(self.logo_img_static)
+        # 添加logo图片（用的是MainFrame里的组件）
+        self.logo_img_panel = widgets.LogoPanel(self.top_menu_bar_panel, wx.ID_ANY, image_ratio = 90)
+        top_menu_bar_sizer.Add(self.logo_img_panel, 1, wx.EXPAND)
 
-    # 添加下方内容主体panel及其子组件
-    def add_content_panel(self):
-        # 添加一个灰色框框的内容主体panel
-        content_panel_pos, content_panel_size, content_panel_margin = calculate_content_panel_size(self.GetClientSize())
-        self.content_panel = widgets.CustomBorderPanel(self, wx.ID_ANY, pos = content_panel_pos, size = content_panel_size,
-                                                       border_thickness = 1, border_color = configs.COLOR_CONTENT_PANEL_INSIDE_BORDER,
-                                                       margin = content_panel_margin, radius = 0)
-        self.content_panel.SetBackgroundColour(configs.COLOR_CONTENT_PANEL_BACKGROUND)
-
-        # 给下方内容主体panel添加子组件
-        self.add_content_panel_child_widgets(self.content_panel)
+        # 刷新布局
+        self.top_menu_bar_panel.Layout()
 
     # 给下方内容主体panel添加子组件
-    def add_content_panel_child_widgets(self, content_panel):
-        content_panel_sizer = content_panel.GetSizer()
+    def add_content_panel_child_widgets(self):
+        content_panel_sizer = self.content_panel.inner_sizer
         content_panel_inner_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        content_panel_sizer.Add(content_panel_inner_sizer, 1, flag = wx.EXPAND | wx.ALL, border = content_panel.margin * 2)
+        content_panel_sizer.Add(content_panel_inner_sizer, 1, flag = wx.EXPAND | wx.ALL, border = self.content_panel.margin * 2)
 
         # 设备
-        self.devices = widgets.CustomBorderPanel(content_panel, wx.ID_ANY, border_thickness = 1,
+        self.devices = widgets.CustomBorderPanel(self.content_panel, wx.ID_ANY, border_thickness = 1,
                                                  border_color = configs.COLOR_CONTENT_PANEL_INSIDE_BORDER)
-        content_panel_inner_sizer.Add(self.devices, proportion = 1, flag = wx.EXPAND | wx.RIGHT, border = content_panel.margin)
+        content_panel_inner_sizer.Add(self.devices, proportion = 1, flag = wx.EXPAND | wx.RIGHT, border = self.content_panel.margin)
 
         # 条码框+产品图片的sizer
         middle_v_box = wx.BoxSizer(wx.VERTICAL)
-        content_panel_inner_sizer.Add(middle_v_box, proportion = 15, flag = wx.EXPAND | wx.RIGHT, border = content_panel.margin)
+        content_panel_inner_sizer.Add(middle_v_box, proportion = 15, flag = wx.EXPAND | wx.RIGHT, border = self.content_panel.margin)
         # 条码框
-        self.bar_code_text_control = widgets.CustomBorderPanel(content_panel, wx.ID_ANY, border_thickness = 1,
+        self.bar_code_text_control = widgets.CustomBorderPanel(self.content_panel, wx.ID_ANY, border_thickness = 1,
                                                                border_color = configs.COLOR_CONTENT_PANEL_INSIDE_BORDER)
-        middle_v_box.Add(self.bar_code_text_control, proportion = 1, flag = wx.EXPAND | wx.BOTTOM, border = content_panel.margin)
+        middle_v_box.Add(self.bar_code_text_control, proportion = 1, flag = wx.EXPAND | wx.BOTTOM, border = self.content_panel.margin)
         # 为条码框创建输入框
         bar_code_text = wx.TextCtrl(self.bar_code_text_control, wx.ID_ANY, value = "请扫描产品条码")
         bar_code_text_font = bar_code_text.GetFont()
         bar_code_text_font.SetWeight(wx.FONTWEIGHT_BOLD)
         bar_code_text.SetFont(bar_code_text_font)
         # 将输入框加到条码框组件的sizer里
-        self.bar_code_text_control.GetSizer().Add(bar_code_text, proportion = 20, flag = wx.EXPAND | wx.ALL, border = 1)
+        self.bar_code_text_control.inner_sizer.Add(bar_code_text, proportion = 20, flag = wx.EXPAND | wx.ALL, border = 1)
         # 为条码框创建扫码小图标
         bar_code_icon_img = wx.Image(PATH_BAR_CODE_ICON, wx.BITMAP_TYPE_ANY)
-        bar_code_icon = CustomBitmapPanel(self.bar_code_text_control, wx.ID_ANY, size = wx.DefaultSize, image = bar_code_icon_img, style = wx.TRANSPARENT_WINDOW)
-        # 将扫码小图标加到条码框组件的sizer里
-        self.bar_code_text_control.GetSizer().Insert(0, bar_code_icon, proportion = 1, flag = wx.EXPAND | wx.ALL, border = 1)
-        # 将子组件存到父组件上
-        self.bar_code_text_control.bar_code_text = bar_code_text
-        self.bar_code_text_control.bar_code_icon = bar_code_icon
+        # bar_code_icon = CustomBitmapPanel(self.bar_code_text_control, wx.ID_ANY, size = wx.DefaultSize, image = bar_code_icon_img, style = wx.TRANSPARENT_WINDOW)
+        # # 将扫码小图标加到条码框组件的sizer里
+        # self.bar_code_text_control.inner_sizer.Insert(0, bar_code_icon, proportion = 1, flag = wx.EXPAND | wx.ALL, border = 1)
+        # # 将子组件存到父组件上
+        # self.bar_code_text_control.bar_code_text = bar_code_text
+        # self.bar_code_text_control.bar_code_icon = bar_code_icon
 
         # 产品图片
-        self.product_image = widgets.CustomBorderPanel(content_panel, wx.ID_ANY, border_thickness = 1,
+        self.product_image = widgets.CustomBorderPanel(self.content_panel, wx.ID_ANY, border_thickness = 1,
                                                        border_color = configs.COLOR_CONTENT_PANEL_INSIDE_BORDER)
         middle_v_box.Add(self.product_image, proportion = 15, flag = wx.EXPAND)
 
@@ -166,22 +150,22 @@ class WorkplaceView(wx.Panel):
         right_v_box = wx.BoxSizer(wx.VERTICAL)
         content_panel_inner_sizer.Add(right_v_box, proportion = 4, flag = wx.EXPAND)
         # 工作状态
-        self.progress_status = widgets.CustomBorderPanel(content_panel, wx.ID_ANY, border_thickness = 1,
+        self.progress_status = widgets.CustomBorderPanel(self.content_panel, wx.ID_ANY, border_thickness = 1,
                                                          border_color = configs.COLOR_CONTENT_PANEL_INSIDE_BORDER)
-        right_v_box.Add(self.progress_status, proportion = 11, flag = wx.EXPAND | wx.BOTTOM, border = content_panel.margin)
+        right_v_box.Add(self.progress_status, proportion = 11, flag = wx.EXPAND | wx.BOTTOM, border = self.content_panel.margin)
 
         # 工作数据
-        self.progress_result_data = widgets.CustomBorderPanel(content_panel, wx.ID_ANY, border_thickness = 1,
+        self.progress_result_data = widgets.CustomBorderPanel(self.content_panel, wx.ID_ANY, border_thickness = 1,
                                                               border_color = configs.COLOR_CONTENT_PANEL_INSIDE_BORDER)
-        right_v_box.Add(self.progress_result_data, proportion = 8, flag = wx.EXPAND | wx.BOTTOM, border = content_panel.margin)
+        right_v_box.Add(self.progress_result_data, proportion = 8, flag = wx.EXPAND | wx.BOTTOM, border = self.content_panel.margin)
 
         # 产品面
-        self.product_sides = widgets.CustomBorderPanel(content_panel, wx.ID_ANY, border_thickness = 1,
+        self.product_sides = widgets.CustomBorderPanel(self.content_panel, wx.ID_ANY, border_thickness = 1,
                                                        border_color = configs.COLOR_CONTENT_PANEL_INSIDE_BORDER)
         right_v_box.Add(self.product_sides, proportion = 7, flag = wx.EXPAND)
 
         # 调用Layout实时展示效果
-        content_panel.Layout()
+        self.content_panel.Layout()
 
     # 返回按钮点击事件
     def back_button_toggled(self, event):
@@ -195,58 +179,29 @@ class WorkplaceView(wx.Panel):
 
     # 主窗口大小变化时，所有界面元素都需要调整
     def main_frame_resizing(self, event):
-        # 使用异步调用可以保证所有元素在画（paint）的过程中，一定在正确的位置
-        if not self.is_resizing:
-            print("workplace -> Resizing frame, Resolution: ", self.top_parent.GetClientSize())
-            self.is_resizing = True
-            wx.CallLater(200, self.resize_everything)
+        print("workplace -> Resizing frame, Resolution: ", self.top_parent.GetClientSize())
+        self.SetSize(self.top_parent.GetClientSize())
         event.Skip()
 
-    # 所有组件自适应
-    def resize_everything(self):
-        # 顶部菜单条panel自适应大小及位置
-        self.SetSize(self.top_parent.GetClientSize())
-        top_menu_bar_panel_pos, top_menu_bar_panel_size = calculate_top_menu_bar_panel_size(self.GetClientSize())
-        self.top_menu_bar_panel.SetSize(top_menu_bar_panel_size)
+    def on_size(self, event):
+        # 设置顶部菜单条大小和位置
+        bar_size, bar_pos = self.calc_menu_bar()
+        self.top_menu_bar_panel.SetSize(bar_size)
+        self.top_menu_bar_panel.SetPosition(bar_pos)
 
-        # 返回按钮自适应大小及位置
-        back_button_pos, back_button_size = calculate_top_menu_bar_button_size(top_menu_bar_panel_size)
-        self.back_button.SetPosition(back_button_pos)
-        self.back_button.SetSize(back_button_size)
+        # 设置内容主体panel大小和位置
+        pan_size, pan_pos = self.calc_content_panel()
+        self.content_panel.SetSize(pan_size)
+        self.content_panel.SetPosition(pan_pos)
 
-        # 主菜单名称 - 标题 自适应大小及位置
-        font_temp = self.main_menu_name.GetFont()
-        font_size = calculate_top_menu_bar_title_font_size(top_menu_bar_panel_size)
-        font_temp.SetPointSize(font_size)
-        self.main_menu_name.SetFont(font_temp)
-        main_menu_name_pos = calculate_top_menu_bar_title_pos(top_menu_bar_panel_size, self.main_menu_name.GetSize())
-        self.main_menu_name.SetPosition(main_menu_name_pos)
-
-        # logo图片自适应调整大小和位置
-        logo_img_png = wx.Image(configs.PATH_LOGO_IMAGE, wx.BITMAP_TYPE_ANY)
-        logo_img_pos, logo_img_size = calculate_logo_img_size(self.top_menu_bar_panel.GetSize(),
-                                                              logo_img_png.GetSize())
-        logo_img_png.Rescale(logo_img_size[0], logo_img_size[1], wx.IMAGE_QUALITY_BILINEAR)
-        self.logo_img_static.SetBitmap(logo_img_png.ConvertToBitmap())
-        self.logo_img_static.SetPosition(logo_img_pos)
-
-        # 内容主体panel自适应调整大小和位置
-        content_panel_pos, content_panel_size, content_panel_margin = calculate_content_panel_size(self.GetClientSize())
-        self.content_panel.SetSize(content_panel_size)
-        self.content_panel.SetPosition(content_panel_pos)
-        self.content_panel.SetMargin(content_panel_margin)
-
-        # 处理主体panel中的子组件之间的border
-        self.adjust_children_size(content_panel_margin)
-
-        # 刷新界面
         self.Refresh()
-        # 重置标识参数
-        self.is_resizing = False
+        self.top_menu_bar_panel.Layout()
+        self.content_panel.Layout()
+        event.Skip()
 
     # 处理主体panel中的子组件之间的border
     def adjust_children_size(self, content_panel_margin):
-        content_panel_sizer = self.content_panel.GetSizer()
+        content_panel_sizer = self.content_panel.inner_sizer
         # 内部sizer
         inner_item = content_panel_sizer.GetChildren()[0]
         inner_item.SetBorder(content_panel_margin * 2)
@@ -302,87 +257,141 @@ class WorkplaceView(wx.Panel):
         widget_obj.Bind(wx.EVT_LEFT_UP, self.window_dragging_mouse_l_up)
 
 
-# 计算顶部菜单条的尺寸和位置
-def calculate_top_menu_bar_panel_size(panel_size):
-    pos_x = 0
-    pos_y = 0
-    width = panel_size[0]
-    height = int(panel_size[1] * 0.05)
-    return (pos_x, pos_y), (width, height)
+    # 计算顶部菜单条的大小和位置
+    def calc_menu_bar(self):
+        width, height = self.GetSize()
+        bar_w = width
+        bar_h = math.ceil(height * 0.05)
+        return (bar_w, bar_h), (0, 0)
 
-# 计算顶部菜单条返回按钮的尺寸和位置
-def calculate_top_menu_bar_button_size(panel_size):
-    height = int(0.8 * panel_size[1])
-    width = height * 2.5
-    pos_y = math.ceil((panel_size[1] - height) / 2)
-    pos_x = pos_y
-    return (pos_x, pos_y), (width, height)
-
-# 计算顶部菜单条主菜单名称字体大小
-def calculate_top_menu_bar_title_font_size(panel_size):
-    size_1 = math.ceil(panel_size[0] / 70) + 2
-    size_2 = math.ceil(panel_size[1] / 2 + 0.4)
-    if panel_size[0] < panel_size[1]:
-        return size_1
-    return size_2
-
-# 计算顶部菜单条主菜单名称的位置
-def calculate_top_menu_bar_title_pos(panel_size, self_size):
-    return int((panel_size[0] - self_size[0]) / 2), int((panel_size[1] - self_size[1]) / 2)
+    # 计算下方内容panel的大小和位置
+    def calc_content_panel(self):
+        width, height = self.GetSize()
+        bar_h = math.ceil(height * 0.05)
+        pan_w = width
+        pan_h = height - bar_h
+        return (pan_w, pan_h), (0, bar_h)
 
 
-# 计算logo图片的尺寸和位置
-def calculate_logo_img_size(panel_size, logo_img_size):
-    width, height = CommonUtils.CalculateNewSizeWithSameRatio(logo_img_size, panel_size[1] * 0.8 / logo_img_size[1])
-    pos_x = panel_size[0] - width - 2
-    pos_y = (panel_size[1] - height) / 2
-    return (pos_x, pos_y), (width, height)
+# 顶部菜单条返回按钮
+class BackButton(widgets.CustomRadiusButton):
+    def __init__(self, parent, id = -1, label = "", font_color = "#FFFFFF", background_color = "#000000",
+                 clicked_color = "#000000", button_size_type = widgets.BUTTON_SIZE_TYPE_NORMAL, radius = 0):
+        widgets.CustomRadiusButton.__init__(self, parent, id, label = label, font_color = font_color,
+                                            background_color = background_color, clicked_color = clicked_color,
+                                            button_size_type = button_size_type, radius = radius)
+    def OnSize(self, event):
+        print("BackButton: ", self.GetParent().GetSize())
+        # 计算按钮大小
+        p_height = self.GetParent().GetSize()[1]
+        height = math.ceil(0.8 * p_height)
+        width = height * 2.5
+        self.SetSize(width, height)
+        super().OnSize(event)
 
 
-# 计算内容panel的尺寸和位置
-def calculate_content_panel_size(panel_size):
-    pos_x = 0
-    pos_y = int(panel_size[1] * 0.05)
-    width = panel_size[0]
-    height = panel_size[1] - int(panel_size[1] * 0.05)
-    margin = int(width / 300) + 3
-    return (pos_x, pos_y), (width, height), margin
+# 顶部菜单条中间文字的panel
+class MiddleTextPanel(wx.Panel):
+    def __init__(self, parent, id = wx.ID_ANY, pos = wx.DefaultPosition,
+                 size = wx.DefaultSize, style = 0, name = "MiddleTextPanel", label = "MiddleTextPanel"):
+        wx.Panel.__init__(self, parent, id, pos, size, style, name)
+        self.text = wx.StaticText(parent, id, pos = pos, size = size, label = label, style = style, name = name)
+        # 设置字体颜色
+        self.text.SetForegroundColour(configs.COLOR_MAIN_MENU_TEXT)
+        # 绑定事件
+        self.Bind(wx.EVT_SIZE, self.on_size)
 
+    def on_size(self, event):
+        print("MiddleTextPanel: ", self.GetParent().GetSize())
+        # 计算字体大小
+        p_width, p_height = self.GetParent().GetSize()
+        size_1 = math.ceil(p_width / 70) + 2
+        size_2 = math.ceil(p_height / 2 + 0.4)
+
+        # 设置字体
+        font_temp = self.GetFont()
+        font_temp.SetWeight(wx.FONTWEIGHT_BOLD)
+        if p_width < p_height:
+            font_temp.SetPointSize(size_1)
+        else:
+            font_temp.SetPointSize(size_2)
+        self.text.SetFont(font_temp)
+        # 设置文字位置
+        s_width, s_height = self.GetSize()
+        x, y = self.GetPosition()
+        tw, th = self.text.GetTextExtent(self.text.GetLabel())
+        self.text.SetPosition((x + (s_width - tw) // 2, y + (s_height - th) // 2))
+        event.Skip()
+
+
+# 下方内容的外层panel
+class ContentPanel(widgets.CustomBorderPanel):
+    def __init__(self, parent, id = -1, border_thickness = 1,
+                 border_color = configs.COLOR_CONTENT_PANEL_INSIDE_BORDER, margin = 0, radius = 0):
+        widgets.CustomBorderPanel.__init__(self, parent, id, border_thickness = border_thickness,
+                                           border_color = border_color, margin = margin, radius = radius)
+
+    def on_size(self, event):
+        print("ContentPanel: ", self.GetParent().GetSize())
+        margin = int(self.GetParent().GetSize()[0] / 300) + 3
+        self.SetMargin(margin)
+        super().on_size(event)
 
 # 自定义Panel，这个只显示一个会根据Panel大小和比例参数，自适应改变大小并显示在正中央的bitmap图片
 class CustomBitmapPanel(wx.Panel):
     def __init__(self, parent, id,
-                 image = None,                      # 这个是wx.Image对象
+                 image = wx.Image(),                # 这个是wx.Image对象
                  image_ratio = 90,                  # 这个是图片大小的比例，单位%
                  pos = wx.DefaultPosition,
                  size = wx.DefaultSize, style = 0, name = "CustomBitmapPanel"):
         wx.Panel.__init__(self, parent, id, pos, size, style, name)
         # bitmap的parent采用跟当前对象的parent同一个，是为了避免bitmap改变大小时会影响到其parent的大小
         # 测试发现bitmap改变大小时，parent的大小如果小于bitmap的尺寸，好像是会跟着变大的
-        self.bitmap = wx.StaticBitmap(self, id, wx.Bitmap.FromRGBA(1, 1, 0, 0, 0), pos, size, style, name)
-        self.image = image
         self.image_ratio = image_ratio
-        self.Rescale(size)
+        self.logo_img_png = image
+        self.logo_img_static = wx.StaticBitmap(self, wx.ID_ANY, self.logo_img_png.ConvertToBitmap())
 
+        # 添加一个sizer让图片右对齐
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        self.sizer.Add(self.logo_img_static, 1, wx.ALL | wx.ALIGN_CENTRE, border = 5)
+        self.SetSizer(self.sizer)
+        self.Layout()
+
+        # 绑定on_size事件
         self.Bind(wx.EVT_SIZE, self.on_size)
+        self.logo_img_static.Bind(wx.EVT_MOTION, self.process_parent_event)
+        self.logo_img_static.Bind(wx.EVT_LEFT_DOWN, self.process_parent_event)
+        self.logo_img_static.Bind(wx.EVT_LEFT_UP, self.process_parent_event)
 
-    def on_size(self, event):
-        self.Rescale(self.GetSize())
+    # 调用父类对应的事件（因为这个组件其实是真正的自定义组件（一个panel假装的）的内部组件，
+    # 正常情况下会在父组件的上方，因此事件触发基本上都是触发此对象，而实际代码逻辑中绑定时都是绑定父对象，因此要向上传递
+    def process_parent_event(self, event):
+        event.SetEventObject(self)
+        self.GetEventHandler().ProcessEvent(event)
         event.Skip()
 
-    def Rescale(self, size):
-        self_w, self_h = size
-        if self.image is not None and self_w > 0 and self_h > 0:
-            size_base = self_w
-            if size_base > self_h:
-                size_base = self_h
-            image = self.image.Copy()
-            i_size = image.GetSize()
-            new_w, new_h = CommonUtils.CalculateNewSizeWithSameRatio(i_size, size_base * (self.image_ratio / 100) / i_size[1])
-            image.Rescale(new_w, new_h, wx.IMAGE_QUALITY_NEAREST)
-            self.bitmap.SetBitmap(image.ConvertToBitmap())
-            # 由于bitmap本身的parent不是self，而是跟self一样的self.parent，因此position需要加上self的position才是我们想要的结果
-            new_x, new_y = self.GetPosition()
-            new_x += (self_w - new_w) // 2
-            new_y += (self_h - new_h) // 2
-            self.bitmap.SetPosition((new_x, new_y))
+    def on_size(self, event):
+        print("test 1111111111111111111 self.GetParent().GetSize(): ", self.GetParent().GetSize())
+        # 复制一个wx.Image，以免多次Rescale导致图片失真
+        log_temp = self.logo_img_png.Copy()
+
+        # 重新根据当前父panel的size计算新的图片size及图片右边的border
+        p_width, p_height = self.GetParent().GetSize()
+        logo_img_width, logo_img_height, border = self.calc_img_size(p_height)
+        log_temp.Rescale(logo_img_width, logo_img_height, wx.IMAGE_QUALITY_BILINEAR)
+        self.SetSize(p_height, p_height)
+
+        # 设置新的bitmap
+        self.logo_img_static.SetBitmap(log_temp.ConvertToBitmap())
+        # 设定新的border
+        self.sizer.GetChildren()[0].SetBorder(border)
+
+        # 刷新一下布局
+        self.Layout()
+        event.Skip()
+
+    # 重新根据当前父panel的size计算新的图片size及图片右边的border
+    def calc_img_size(self, p_height):
+        img_size = self.logo_img_png.GetSize()
+        width, height = CommonUtils.CalculateNewSizeWithSameRatio(img_size, p_height * (self.image_ratio / 100) / img_size[1])
+        return width, height, math.floor((p_height - height) / 2)
