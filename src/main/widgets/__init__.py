@@ -198,7 +198,7 @@ class CustomMenuButton(wx.Panel):
 
         if is_toggled and need_trigger_bar:
             self.SetToggle(is_toggled)
-            # self.SetBackgroundColour(label_color)
+            self.SetBackgroundColour(label_color)
             self.leave_color = toggle_color
 
         self.SetLabel(label)
@@ -217,9 +217,11 @@ class CustomMenuButton(wx.Panel):
             self.SetSize(width, height)
         # 在这里初始化就不会导致panel在被初始化时，因bitmap是初始大小，而导致整个布局出错
         if self.button is None:
-            self.button = CustomGenBitmapTextToggleButton(self, self.GetId(), self.bitmap, self.label,
+            # the position here for the button should be (0, 0),
+            # otherwise the button will disappear if it locates outside the outer panel.
+            self.button = CustomGenBitmapTextToggleButton(self, wx.ID_ANY, self.bitmap, self.label,
                                                           self.label_color, self.toggle_color, self.background_color,
-                                                          self.is_toggled, self.GetPosition(), (height, height), self.style,
+                                                          self.is_toggled, (0, 0), (height, height), self.style,
                                                           self.validator, self.custom_style, self.GetName())
         event.Skip()
 
@@ -601,19 +603,20 @@ class LogoPanel(wx.Panel):
         wx.Panel.__init__(self, parent, id, pos = pos, size = size, style = style, name = name)
         self.image_ratio = image_ratio
         self.logo_img_png = wx.Image(configs.PATH_LOGO_IMAGE, wx.BITMAP_TYPE_ANY)
-        self.logo_img_static = wx.StaticBitmap(self, wx.ID_ANY, self.logo_img_png.ConvertToBitmap())
+        # self.logo_img_static = wx.StaticBitmap(self, wx.ID_ANY, self.logo_img_png.ConvertToBitmap())
 
-        # 添加一个sizer让图片右对齐
-        self.sizer = wx.BoxSizer(wx.VERTICAL) # 由于右对齐对水平sizer不生效因此加一个垂直sizer
-        self.sizer.Add(self.logo_img_static, 1, wx.RIGHT | wx.ALIGN_RIGHT, border = 5)
-        self.SetSizer(self.sizer)
-        self.Layout()
+        # # 添加一个sizer让图片右对齐
+        # self.sizer = wx.BoxSizer(wx.VERTICAL) # 由于右对齐对水平sizer不生效因此加一个垂直sizer
+        # self.sizer.Add(self.logo_img_static, 1, wx.RIGHT | wx.ALIGN_RIGHT, border = 5)
+        # self.SetSizer(self.sizer)
+        # self.Layout()
 
         # 绑定on_size事件
-        self.Bind(wx.EVT_SIZE, self.on_size)
-        self.logo_img_static.Bind(wx.EVT_MOTION, self.process_parent_event)
-        self.logo_img_static.Bind(wx.EVT_LEFT_DOWN, self.process_parent_event)
-        self.logo_img_static.Bind(wx.EVT_LEFT_UP, self.process_parent_event)
+        # self.Bind(wx.EVT_SIZE, self.on_size)
+        self.Bind(wx.EVT_PAINT, self.on_paint)
+        # self.logo_img_static.Bind(wx.EVT_MOTION, self.process_parent_event)
+        # self.logo_img_static.Bind(wx.EVT_LEFT_DOWN, self.process_parent_event)
+        # self.logo_img_static.Bind(wx.EVT_LEFT_UP, self.process_parent_event)
 
     # 调用父类对应的事件（因为这个组件其实是真正的自定义组件（一个panel假装的）的内部组件，
     # 正常情况下会在父组件的上方，因此事件触发基本上都是触发此对象，而实际代码逻辑中绑定时都是绑定父对象，因此要向上传递
@@ -630,14 +633,32 @@ class LogoPanel(wx.Panel):
         logo_img_width, logo_img_height, border = self.calculate_logo_img_size()
         log_temp.Rescale(logo_img_width, logo_img_height, wx.IMAGE_QUALITY_BILINEAR)
 
-        # 设置新的bitmap
-        self.logo_img_static.SetBitmap(log_temp.ConvertToBitmap())
-        # 设定新的border
-        self.sizer.GetChildren()[0].SetBorder(border)
+        # # 设置新的bitmap
+        # self.logo_img_static.SetBitmap(log_temp.ConvertToBitmap())
+        # # 设定新的border
+        # self.sizer.GetChildren()[0].SetBorder(border)
 
         # 刷新一下布局
         self.Layout()
         event.Skip()
+
+
+    def on_paint(self, event):
+        dc = wx.GCDC(wx.PaintDC(self))
+
+        # 复制一个wx.Image，以免多次Rescale导致图片失真
+        log_temp = self.logo_img_png.Copy()
+
+        # 重新根据当前父panel的size计算新的图片size及图片右边的border
+        logo_img_width, logo_img_height, border = self.calculate_logo_img_size()
+        log_temp.Rescale(logo_img_width, logo_img_height, wx.IMAGE_QUALITY_BILINEAR)
+
+        bitmap = log_temp.ConvertToBitmap()
+        dc.DrawBitmap(bitmap, 0, 0, bitmap.GetMask() is not None)
+
+        del dc
+        event.Skip()
+
 
     # 重新根据当前父panel的size计算新的图片size及图片右边的border
     def calculate_logo_img_size(self):

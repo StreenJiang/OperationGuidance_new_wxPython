@@ -6,6 +6,7 @@ from src.main import widgets
 import src.main.configs as configs
 import src.main.controllers as controller
 from src.main.configs import SystemConfigs
+from src.main.utils import CommonUtils
 
 
 # 主窗体类
@@ -36,8 +37,7 @@ class MainFrame(wx.Frame):
         main_sizer = wx.BoxSizer(wx.VERTICAL)
 
         # 主菜单panel
-        self.main_menu_panel = wx.Panel(self.main_panel, wx.ID_ANY)
-        self.main_menu_panel.SetBackgroundColour(configs.COLOR_MENU_BACKGROUND)
+        self.main_menu_panel = MainMenuPanel(self.main_panel, wx.ID_ANY)
         # 添加到主sizer
         main_sizer.Add(self.main_menu_panel, 3, wx.EXPAND)
         # 初始化主菜单panel（包含一个logo）
@@ -57,7 +57,6 @@ class MainFrame(wx.Frame):
 
         # 设置主sizer
         self.main_panel.SetSizer(main_sizer)
-        self.main_panel.Layout()
 
         # 给主窗口绑定【窗口大小变化】事件，确保不同分辨率下，系统UI始终保持最佳比例
         self.is_resizing = False
@@ -85,31 +84,13 @@ class MainFrame(wx.Frame):
 
     # 初始化主菜单panel
     def set_up_main_menu_panel(self):
-        main_menu_panel_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.main_menu_panel.SetSizer(main_menu_panel_sizer)
-
-        button_panel = MainMenuPanel(self.main_menu_panel, wx.ID_ANY)
-        main_menu_panel_sizer.Add(button_panel, 1, wx.EXPAND)
-        button_panel_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        button_panel.SetSizer(button_panel_sizer)
-
         index = 0 # index放外面主要是因为配置里有些菜单不一定是enabled，而index需要保持0开始并且是连续的
         for menu_config in SystemConfigs.main_menus_config:
             if menu_config["enabled"] and menu_config["id"] in self.sys_variables["license_data"]["MAIN_MENU_LIST"]:
-                btn_temp = widgets.CustomMenuButton(
-                    button_panel,
-                    wx.ID_ANY,
-                    wx.Image(menu_config["icon"], wx.BITMAP_TYPE_ANY).ConvertToBitmap(),
-                    label = menu_config["name"],
-                    label_color = configs.COLOR_TEXT_THEME,
-                    custom_style = widgets.BUTTON_STYLE_VERTICAL,
-                    background_color = configs.COLOR_MENU_BUTTON_BACKGROUND,
-                    toggle_color = configs.COLOR_MENU_BUTTON_TOGGLE,
-                    is_toggled = index == 0,
+                btn_temp = self.main_menu_panel.add_button(
+                    icon = wx.Image(menu_config["icon"], wx.BITMAP_TYPE_ANY).ConvertToBitmap(),
+                    label = menu_config["name"], is_toggled = index == 0
                 )
-                button_panel.buttons.append(btn_temp)
-                button_panel_sizer.Add(btn_temp, 1, wx.EXPAND)
-
                 # 设置当前被激活的主菜单按钮
                 if index == 0:
                     self.current_main_menu = btn_temp
@@ -135,14 +116,7 @@ class MainFrame(wx.Frame):
                 self.main_menus.append(btn_temp)
 
         # 添加logo图片
-        logo_panel = widgets.LogoPanel(self.main_menu_panel, wx.ID_ANY)
-        main_menu_panel_sizer.Add(logo_panel, 1, wx.EXPAND)
-
-        # 绑定事件
-        self.bind_dragging_event(logo_panel)
-
-        self.main_menu_panel.Layout()
-        self.main_menu_panel.button_panel = button_panel
+        self.main_menu_panel.add_logo(wx.Image(configs.PATH_LOGO_IMAGE, wx.BITMAP_TYPE_ANY).ConvertToBitmap())
 
     # 初始化主体内容panel
     def set_up_content_panel(self):
@@ -306,10 +280,10 @@ class MainFrame(wx.Frame):
                 # 更新当前主菜单按钮对象
                 self.current_main_menu = btn_panel_temp
 
-                # 触发事件对象所绑定的事件
-                controller.call_api(event)
-
                 self.content_outer_panel.Layout()
+
+            # 触发事件对象所绑定的事件
+            controller.call_api(event)
         else:
             # 如果点的是已经激活的菜单，也要重新激活一下，因为toggle按钮组件底层SetToggle一定会被调用，toggle会被设置会False，所以要手动激活一下
             # 尝试过重写，SetToggle方法，但是会出现更奇怪的问题，所以就这样解决吧
@@ -392,21 +366,7 @@ class MainFrame(wx.Frame):
         widget_obj.Bind(wx.EVT_LEFT_DOWN, self.window_dragging_mouse_l_down)
         widget_obj.Bind(wx.EVT_LEFT_UP, self.window_dragging_mouse_l_up)
 
-# 主菜单容纳按钮的panel组件
-class MainMenuPanel(wx.Panel):
-    def __init__(self, parent, id = wx.ID_ANY, pos = wx.DefaultPosition,
-                 size = wx.DefaultSize, style = 0, name = "MainMenuPanel"):
-        wx.Panel.__init__(self, parent, id, pos = pos, size = size, style = style, name = name)
-        self.buttons = []
-        self.Bind(wx.EVT_SIZE, self.on_size)
 
-    def on_size(self, event):
-        width, height = self.GetParent().GetSize()
-        self.SetSize(len(self.buttons) * height, height)
-
-        # 刷新一下布局
-        self.Layout()
-        event.Skip()
 
 
 # 子菜单容纳按钮的panel组件
@@ -425,4 +385,86 @@ class ChildMenuPanel(wx.Panel):
         # 刷新一下布局
         self.Layout()
         event.Skip()
+
+
+# 主菜单panel组件
+class MainMenuPanel(wx.Panel):
+    def __init__(self, parent, id = wx.ID_ANY, pos = wx.DefaultPosition,
+                 size = wx.DefaultSize, style = 0, name = "MainMenuPanel"):
+        wx.Panel.__init__(self, parent, id, pos = pos, size = size, style = style, name = name)
+        self.SetBackgroundColour(configs.COLOR_MENU_BACKGROUND)
+        self.buttons = []
+        self.logo_bitmap = None
+        self.logo_static_bitmap = None
+        self.Bind(wx.EVT_SIZE, self.on_size)
+
+    def on_size(self, event):
+        # 计算自身size和pos
+        size, pos = self.calc_self()
+        self.SetSize(size)
+
+        # 重设按钮的size和pos
+        for index in range(len(self.buttons)):
+            btn = self.buttons[index]
+            # 计算当前按钮的size和pos
+            b_size, b_pos = self.calc_button(index)
+            # 设置size和pos
+            btn.SetSize(b_size)
+            btn.SetPosition(b_pos)
+
+        # 重设logo的size和pos
+        if self.logo_bitmap is not None:
+            image = self.logo_bitmap.ConvertToImage()
+            # 计算logo的size和pos
+            i_size, i_pos = self.calc_logo(image.GetSize())
+            # 重新设置图片的尺寸
+            image.Rescale(i_size[0], i_size[1], wx.IMAGE_QUALITY_BILINEAR)
+            # 如果还没创建staticBitmap就创建一个
+            if self.logo_static_bitmap is None:
+                self.logo_static_bitmap = wx.StaticBitmap(self, wx.ID_ANY)
+            # 重新设置bitmap
+            self.logo_static_bitmap.SetBitmap(wx.Bitmap(image))
+            # 重新设置pos
+            self.logo_static_bitmap.SetPosition(i_pos)
+
+        self.Refresh()
+        event.Skip()
+
+    def add_button(self, icon, label, is_toggled):
+        btn_temp = widgets.CustomMenuButton(
+            self,
+            wx.ID_ANY,
+            icon,
+            label = label,
+            label_color = configs.COLOR_TEXT_THEME,
+            custom_style = widgets.BUTTON_STYLE_VERTICAL,
+            background_color = configs.COLOR_MENU_BUTTON_BACKGROUND,
+            toggle_color = configs.COLOR_MENU_BUTTON_TOGGLE,
+            is_toggled = is_toggled
+        )
+        self.buttons.append(btn_temp)
+        return btn_temp
+
+    def add_logo(self, bitmap):
+        self.logo_bitmap = bitmap
+
+    def calc_self(self):
+        p_w, p_h = self.GetParent().GetSize()
+        return (p_w, math.ceil(0.12 * p_h)), (0, 0)
+
+    def calc_button(self, index):
+        w, h = self.GetSize()
+        b_w = b_h = h
+        b_x = index * b_w
+        b_y = 0
+        return (b_w, b_h), (b_x, b_y)
+
+    def calc_logo(self, image_size):
+        w, h = self.GetSize()
+        l_w, l_h = image_size
+        l_w, l_h = CommonUtils.CalculateNewSizeWithSameRatio((l_w, l_h), h * 0.7 / l_h)
+        l_x = w - l_w - 5
+        l_y = (h - l_h) // 2
+        return (l_w, l_h), (l_x, l_y)
+
 
