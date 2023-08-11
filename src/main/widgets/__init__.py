@@ -127,7 +127,7 @@ class CustomGenBitmapTextToggleButton(buttons.GenBitmapTextToggleButton):
             if not self.up:
                 dx = dy = self.labelDelta
 
-            pos_x = width / 15 + (width - tw) / 20 # adjust for bitmap and text to centre
+            pos_x = width / 10 + (width - tw) / 20 # adjust for bitmap and text to centre
             if bmp is not None:
                 dc.DrawBitmap(bmp, pos_x, (height - bh - (bh / 100 * 10)) / 2 + dy, hasMask)  # draw bitmap if available
                 pos_x = pos_x + (width / 15)  # extra spacing from bitmap
@@ -137,7 +137,7 @@ class CustomGenBitmapTextToggleButton(buttons.GenBitmapTextToggleButton):
             # handle the font, make it adjust the size
             font_temp = self.GetFont()
             font_temp.SetWeight(wx.FONTWEIGHT_BOLD)
-            font_temp.SetPointSize(int(height / 9) + 1)
+            font_temp.SetPointSize(int(height / 8) + 1)
             dc.SetFont(font_temp)
             dc.SetTextForeground(self.label_color)
 
@@ -223,6 +223,7 @@ class CustomMenuButton(wx.Panel):
                                                           self.label_color, self.toggle_color, self.background_color,
                                                           self.is_toggled, (0, 0), (height, height), self.style,
                                                           self.validator, self.custom_style, self.GetName())
+            self.SetToggle(self.GetToggle())
         event.Skip()
 
     def on_enter(self, event):
@@ -261,6 +262,8 @@ class CustomMenuButton(wx.Panel):
     def SetToggle(self, flag):
         if self.button is not None:
             self.button.SetToggle(flag)
+            width, height = self.GetSize()
+            self.SetSize(width, height)
         if flag:
             self.SetBackgroundColour(self.toggle_color)
         else:
@@ -289,13 +292,19 @@ class CustomMenuButton(wx.Panel):
             self.SetButtonSize(width, height)
 
     def SetButtonSize(self, width, height):
+        x, y = 0, 0
         if self.custom_style == BUTTON_STYLE_HORIZONTAL and self.need_trigger_bar:
-            width_reduction = math.floor(width * 0.05)
-            width, height = (width - width_reduction, height)
-            self.button.SetPosition((width_reduction, 0))
+            if self.GetToggle():
+                width_reduction = self.get_width_reduction(width)
+                width, height = (width - width_reduction, height)
+                x = width_reduction
         else:
             pass
         self.button.SetSize(width, height)
+        self.button.SetPosition((x, y))
+
+    def get_width_reduction(self, width):
+        return math.floor(width * 0.06)
 
 
 # 自定义圆角按钮的类型
@@ -530,12 +539,9 @@ class CustomBorderPanel(wx.Panel):
 
     def on_size(self, event):
         if self.self_adaptive:
-            margin_1 = math.ceil(self.GetSize()[0] / 350)
+            margin_1 = math.ceil(self.GetSize()[0] / 300)
             margin_2 = math.ceil(self.GetSize()[1] / 300)
-            margin = margin_1
-            if margin > margin_2:
-                margin = margin_2
-            self.SetMargin(margin + 3)
+            self.SetMargin(margin_1 + margin_2)
         event.Skip()
 
     # 重写SetSizer以支持对Panel本身设置Sizer

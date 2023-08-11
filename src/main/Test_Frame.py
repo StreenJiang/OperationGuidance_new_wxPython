@@ -15,8 +15,12 @@ class MyFrame(wx.Frame):
         self.main_panel.SetBackgroundColour(wx.WHITE)
 
         self.p = panel(self.main_panel)
+        self.p.set_test(self.test2)
 
         self.Bind(wx.EVT_SIZE, self.main_frame_on_size)
+
+    def test2(self):
+        print("test2222222222222")
 
 
     # 主窗口大小变化时，所有界面元素都需要调整
@@ -24,6 +28,7 @@ class MyFrame(wx.Frame):
         print("resize")
         self.main_panel.SetSize(self.GetClientSize())
         # self.p.SetSize(self.GetClientSize())
+        self.p.test()
 
 
 
@@ -32,6 +37,7 @@ class MyFrame(wx.Frame):
 class panel(wx.Panel):
     def __init__(self, parent, size = wx.DefaultSize):
         wx.Panel.__init__(self, parent, -1, size = size)
+        self.test = None
 
         self.Bind(wx.EVT_SIZE, self.on_size)
         self.Bind(wx.EVT_PAINT, self.on_paint)
@@ -41,6 +47,12 @@ class panel(wx.Panel):
 
     def on_paint(self, event):
         print("on_paint")
+
+    def test(self):
+        print("test111111111111")
+
+    def set_test(self, method):
+        self.test = method
 
 
 
