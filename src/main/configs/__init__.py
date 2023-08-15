@@ -14,7 +14,8 @@ COLOR_SYSTEM_LOGO = "#E86C10"                       # 默认参数 - 颜色 - lo
 COLOR_SYSTEM_BACKGROUND = "#F0F0F0"                 # 默认参数 - 颜色 - 系统背景颜色
 
 COLOR_MENU_BACKGROUND = "#3F3F3F"                   # 默认参数 - 颜色 - 菜单栏的背景颜色
-COLOR_MENU_BUTTON_BACKGROUND = "#3F3F3F"            # 默认参数 - 颜色 - 菜单按钮的背景颜色
+COLOR_MAIN_MENU_BUTTON_BACKGROUND = "#3F3F3F"       # 默认参数 - 颜色 - 主菜单按钮的背景颜色
+COLOR_CHILD_MENU_BUTTON_BACKGROUND = "#444444"      # 默认参数 - 颜色 - 子菜单按钮的背景颜色
 COLOR_MENU_BUTTON_TOGGLE = "#F0F0F0"                # 默认参数 - 颜色 - 菜单按钮触发后的颜色
 
 COLOR_CONTENT_PANEL_BACKGROUND = "#F0F0F0"          # 默认参数 - 颜色 - 内容主体界面的背景颜色

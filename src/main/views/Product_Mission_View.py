@@ -16,9 +16,9 @@ MISSION_DATA_CACHE_TIME_OUT = 120 # 数据缓存过期时间（秒）
 # 任务列表展示界面的gridSizer的列数固定为4
 MISSION_COLUMNS = 4
 # 每个任务之间的间隔占content_panel宽度的多少比例
-MISSION_GAP_RATIO = 5
+MISSION_GAP_RATIO = 4
 # 每个任务的高度占content_panel的多少比例
-MISSION_HEIGHT_RATIO = 35
+MISSION_HEIGHT_RATIO = 33
 # 展示区域的行达到多少就需要滚动条
 MISSION_ROWS_SCROLL = 3
 
@@ -27,9 +27,9 @@ MISSION_ROWS_SCROLL = 3
 class ProductMissionView(widgets.CustomViewPanel):
     def __init__(self, parent = None, id = wx.ID_ANY,
                  pos = wx.DefaultPosition, size = wx.DefaultSize,
-                 style = 0, name = "ProductMissionView"):
-        widgets.CustomViewPanel.__init__(self, parent, id, pos, size, style, name)
-        self.menu_name = parent.menu_name
+                 style = 0, name = "ProductMissionView", menu_name = ""):
+        widgets.CustomViewPanel.__init__(self, parent, id, pos, size, style, name, menu_name)
+        self.menu_name = menu_name
         self.call_back_variables = None
         self.add_mission_button = None
         self.block_panel = None
@@ -46,13 +46,56 @@ class ProductMissionView(widgets.CustomViewPanel):
         self.parent.scroll_bar = None
 
         self.is_painting = False
-        self.Bind(wx.EVT_PAINT, self.on_paint)
+
+        self.initialize()
+
+    def initialize(self):
+        # 从缓存中取出数据
+        data = self.get_data()
+        # data = []
+
+        if len(data) == 0:
+            # 如果没有任何任务，则提供一个跳转到任务管理界面添加任务的按钮
+            self.create_add_button()
+            self.add_mission_button.Center()
+            self.add_mission_button.Refresh()
+        else:
+            self.create_block_panel(data)
+
+    # 创建“添加任务”按钮
+    def create_add_button(self):
+        self.add_mission_button = widgets.CustomRadiusButton(self, wx.ID_ANY, label = "点击添加任务",
+                                                             font_color = configs.COLOR_BUTTON_TEXT,
+                                                             background_color = configs.COLOR_BUTTON_BACKGROUND,
+                                                             clicked_color = configs.COLOR_BUTTON_CLICKED,
+                                                             button_size_type = widgets.BUTTON_SIZE_TYPE_BIG,
+                                                             button_type = widgets.BUTTON_TYPE_NORMAL,
+                                                             radius = 3)
+        self.add_mission_button.Bind(wx.EVT_LEFT_DOWN, self.button_on_click)
+
+    # 创建任务展示块的列表
+    def create_block_panel(self, data):
+        self.block_panel = MissionBlocksPanel(self, wx.ID_ANY)
+        # 创建展示块
+        for index in range(len(data)):
+            mission_obj = data[index]
+            mission_name = mission_obj.GetMissionName()
+            mission_image = mission_obj.GetMissionProductSides()[0].GetSideImage().GetImageOriginal()
+            mission_image = CommonUtils.PILImageToWxImage(mission_image).ConvertToBitmap()
+            mission_block = self.block_panel.add_block(mission_name = mission_name, mission_image = mission_image)
+            mission_block.Bind(wx.EVT_LEFT_UP, self.mission_block_click)
+            self.mission_blocks.append(mission_block)
+
 
     # 重写父类的on_size方法，并且不需要重复绑定，否则会出现多次调用
     def on_size(self, event):
         self.SetMargin(self.GetSize()[1] * 0.02)
         super().on_size(event)
-        # self.Layout()
+
+        # 手动触发children的on_size事件
+        if self.block_panel is not None:
+            event.SetEventObject(self.block_panel)
+            self.block_panel.GetEventHandler().ProcessEvent(event)
 
     def on_paint(self, event):
         # 从缓存中取出数据
@@ -62,66 +105,30 @@ class ProductMissionView(widgets.CustomViewPanel):
         # 如果没有任何任务，则提供一个跳转到任务管理界面添加任务的按钮
         if len(data) == 0:
             if self.add_mission_button is None:
-                self.add_mission_button = widgets.CustomRadiusButton(self, wx.ID_ANY, label = "点击添加任务",
-                                                                     font_color = configs.COLOR_BUTTON_TEXT,
-                                                                     background_color = configs.COLOR_BUTTON_BACKGROUND,
-                                                                     clicked_color = configs.COLOR_BUTTON_CLICKED,
-                                                                     button_size_type = widgets.BUTTON_SIZE_TYPE_BIG,
-                                                                     button_type = widgets.BUTTON_TYPE_NORMAL,
-                                                                     size = self.get_button_size(), radius = 3)
-                self.add_mission_button.Bind(wx.EVT_LEFT_DOWN, self.button_on_click)
-            else:
-                self.add_mission_button.SetSize(self.get_button_size())
+                self.create_add_button()
+            # 计算添加按钮的size
+            self.add_mission_button.SetSize(self.calc_add_button())
             # 刷新按钮至中间的位置
             self.add_mission_button.Center()
             self.add_mission_button.Refresh()
+            # 按钮有可能隐藏了，所以调用一下show方法
+            self.add_mission_button.Show()
+            # 如果之前有创建任务展示块，则销毁（这种情况下采用销毁措施会使软件整体性能更好）
+            if self.block_panel is not None:
+                self.block_panel.Destroy()
+                self.block_panel = None
         else:
+            # 如果之前有创建添加任务按钮，则销毁（暂时用不到就销毁吧，提升一下性能）
+            if self.add_mission_button is not None:
+                self.add_mission_button.Destroy()
+                self.add_mission_button = None
+            # 如果数据有更新，则需要新创建任务展示块
             if self.data_changed:
-                data_len = len(data)
-                # 计算grid需要几行
-                grid_rows = math.ceil(data_len / MISSION_COLUMNS)
-                # 需要一个宽度与self.width一致但高度会根据数据量动态改变的panel（为了实现滚动效果）
-                if self.block_panel is None:
-                    self.block_panel = MissionBlocksPanel(self, wx.ID_ANY, grid_rows = grid_rows)
-                    block_sizer = wx.GridSizer(cols = MISSION_COLUMNS)
-                    self.block_panel.SetSizer(block_sizer)
-                    # 将此panel加入sizer
-                    if self.sizer is None:
-                        self.sizer = wx.BoxSizer(wx.VERTICAL)
-                        self.SetSizer(self.sizer)
-                    self.sizer.Add(self.block_panel, 1, wx.EXPAND)
-                else:
-                    self.block_panel.SetGridRows(grid_rows)
-                    block_sizer = self.block_panel.GetSizer()
-                    block_sizer.SetRows(grid_rows)
+                # 如果之前创建了则先销毁，重新画
+                if self.block_panel is not None:
+                    self.block_panel.Destroy()
+                self.create_block_panel(data)
 
-                # 计算每个展示块的间距
-                gap = math.floor(self.GetSize()[1] * (MISSION_GAP_RATIO / 100))
-                block_sizer.SetHGap(gap)
-                block_sizer.SetVGap(gap)
-
-                # 销毁所有之前的展示块
-                if len(self.mission_blocks) != 0:
-                    for block in self.mission_blocks:
-                        if block and not block.IsBeingDeleted():
-                            block.Destroy()
-                # 清除sizer中所有的
-                block_sizer.Clear()
-
-                # 创建展示块
-                for index in range(data_len):
-                    mission_obj = data[index]
-                    mission_name = mission_obj.GetMissionName()
-                    mission_image = mission_obj.GetMissionProductSides()[0].GetSideImage().GetImageOriginal()
-                    mission_image = CommonUtils.PILImageToWxImage(mission_image).ConvertToBitmap()
-                    mission_block = MissionBlock(self.block_panel, wx.ID_ANY, mission_name = mission_name, mission_image = mission_image)
-                    # 初始化视图变量
-                    mission_block.view = None
-                    mission_block.Bind(wx.EVT_LEFT_UP, self.mission_block_click)
-                    block_sizer.Add(mission_block, 1, wx.EXPAND)
-                    self.mission_blocks.append(mission_block)
-
-        self.Layout()
         event.Skip()
 
     # 获取缓存数据
@@ -159,7 +166,7 @@ class ProductMissionView(widgets.CustomViewPanel):
         self.data = data
         return data
 
-    def get_button_size(self):
+    def calc_add_button(self):
         width, height = self.GetSize()
         return width / 6.5, height / 10
 
@@ -188,23 +195,55 @@ class ProductMissionView(widgets.CustomViewPanel):
             eventObj.view.Show()
 
 
-# 显示所有任务块的panel，用于设置GridSizer，高度可以超出父panel，超出时使用滚动条
+# 显示所有任务块的panel，用于显示、管理所有任务展示块；高度可以超出父panel，超出时使用滚动条
 class MissionBlocksPanel(wx.Panel):
     def __init__(self, parent, id = -1, pos = wx.DefaultPosition, size = wx.DefaultSize,
-                 style = 0, name = "MissionBlocksPanel", grid_rows = 0):
+                 style = 0, name = "MissionBlocksPanel"):
         wx.Panel.__init__(self, parent, id, pos, size, style, name)
-        self.grid_rows = grid_rows
+        self.blocks = []
+
         self.Bind(wx.EVT_SIZE, self.on_size)
 
-    def SetGridRows(self, grid_rows):
-        self.grid_rows = grid_rows
+    def add_block(self, mission_name, mission_image):
+        # 创建任务展示块
+        mission_block = MissionBlock(self, wx.ID_ANY, mission_name = mission_name, mission_image = mission_image)
+        # 初始化视图变量
+        mission_block.view = None
+        # 存入数组
+        self.blocks.append(mission_block)
+        return mission_block
 
     def on_size(self, event):
         p_width, p_height = self.GetParent().GetSize()
+        blocks_count = len(self.blocks)
         new_width = p_width
-        new_height = p_height * (MISSION_HEIGHT_RATIO / 100) * self.grid_rows
+        # 计算当前block的数量需要摆几行，公式：向下取整(blocks_count / MISSION_COLUMNS)
+        rows = math.ceil(blocks_count / MISSION_COLUMNS)
+        # 计算每个block之间的gap，公式：gap += panel宽度 x block横向gap所占比例
+        gap = new_width * MISSION_GAP_RATIO / 100
+        # 计算panel的高度，公式：new_height = 父panel高度 x block高度所占比例 x 需要多少行
+        new_height = p_height * (MISSION_HEIGHT_RATIO / 100) * rows + gap * (rows - 1)
+        # 还需要加上每行之间的gap，
         self.SetSize(new_width, new_height)
+
+        if blocks_count > 0:
+            for index in range(len(self.blocks)):
+                block = self.blocks[index]
+                # 计算任务展示块的size和pos
+                b_size, b_pos = self.calc_block(index, rows, gap)
+                block.SetSize(b_size)
+                block.SetPosition(b_pos)
+
         event.Skip()
+
+    def calc_block(self, index, rows, gap):
+        w, h = self.GetSize()
+        # 计算block的宽度，公式：b_w = panel宽度 - 每个block之间的gap * 3
+        b_w = (w - gap * (MISSION_COLUMNS - 1)) // MISSION_COLUMNS
+        b_h = math.floor(h - gap * (rows - 1)) / rows
+        b_x = (b_w + gap) * (index % MISSION_COLUMNS)
+        b_y = (b_h + gap) * math.floor(index / MISSION_COLUMNS)
+        return (b_w, b_h), (b_x, b_y)
 
 
 # 每一个单独的任务块panel，封装起来更易读、易用、易维护

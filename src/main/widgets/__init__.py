@@ -350,9 +350,13 @@ class CustomRadiusButton(buttons.GenBitmapButton):
             self.OnKeyDown(event)
         else:
             self.OnLeftUp(event)
+        super().OnSize(event)
 
     def OnMotion(self, event):
         pass
+
+    def OnPaint(self, event):
+        super().OnPaint(event)
 
     def on_enter(self, event):
         if self.button_type == BUTTON_TYPE_NORMAL:
@@ -581,10 +585,12 @@ class CustomBorderPanel(wx.Panel):
 # 自定义的view_panel，可以设定margin（外边距）
 class CustomViewPanel(wx.Panel):
     def __init__(self, parent, id = -1, pos = wx.DefaultPosition, size = wx.DefaultSize,
-                 style = 0, name = "CustomViewPanel", margin = 0):
+                 style = 0, name = "CustomViewPanel", margin = 0, menu_name = ""):
         wx.Panel.__init__(self, parent, id, pos, size, style, name)
         self.margin = margin
+        self.menu_name = menu_name
         self.Bind(wx.EVT_SIZE, self.on_size)
+        self.Bind(wx.EVT_PAINT, self.on_paint)
 
     def on_size(self, event):
         size = self.GetSize()
@@ -594,6 +600,9 @@ class CustomViewPanel(wx.Panel):
         self.SetSize(size)
         self.SetPosition(position)
         # event.Skip() # 注释掉就可以解决触发重复触发次数过多的问题，暂时不太理解为什么
+
+    def on_paint(self, event):
+        event.Skip()
 
     def SetMargin(self, margin):
         self.margin = margin
