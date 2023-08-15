@@ -36,17 +36,13 @@ class ProductMissionView(widgets.CustomViewPanel):
         self.mission_blocks = []
         self.content_blocks = None
         self.has_scroller = False
-        self.need_redraw = True
-        self.sizer = None
         self.data = None
         self.data_changed = False
-        self.size_cache = None
 
         self.parent = self.GetParent()
         self.parent.scroll_bar = None
 
         self.is_painting = False
-
         self.initialize()
 
     def initialize(self):
@@ -82,9 +78,15 @@ class ProductMissionView(widgets.CustomViewPanel):
             mission_name = mission_obj.GetMissionName()
             mission_image = mission_obj.GetMissionProductSides()[0].GetSideImage().GetImageOriginal()
             mission_image = CommonUtils.PILImageToWxImage(mission_image).ConvertToBitmap()
-            mission_block = self.block_panel.add_block(mission_name = mission_name, mission_image = mission_image)
+            mission_block = self.block_panel.add_block(mission_name = mission_name,
+                                                       mission_image = mission_image)
             mission_block.Bind(wx.EVT_LEFT_UP, self.mission_block_click)
+            mission_block.Refresh()
             self.mission_blocks.append(mission_block)
+        # 主动触发on_size事件，重新设置任务展示块相关size和pos
+        event_temp = wx.SizeEvent((0, 0))
+        event_temp.SetEventObject(self.block_panel)
+        self.block_panel.GetEventHandler().ProcessEvent(event_temp)
 
 
     # 重写父类的on_size方法，并且不需要重复绑定，否则会出现多次调用
@@ -129,6 +131,7 @@ class ProductMissionView(widgets.CustomViewPanel):
                     self.block_panel.Destroy()
                 self.create_block_panel(data)
 
+        self.Refresh()
         event.Skip()
 
     # 获取缓存数据
@@ -214,6 +217,7 @@ class MissionBlocksPanel(wx.Panel):
         return mission_block
 
     def on_size(self, event):
+        # 计算自身size
         p_width, p_height = self.GetParent().GetSize()
         blocks_count = len(self.blocks)
         new_width = p_width
