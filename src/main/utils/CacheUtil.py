@@ -21,11 +21,25 @@ def Get(key):
         :param key: 缓存数据的key
         :return: 返回缓存数据。如果超时则返回None
     """
+    if HasExpired(key):
+        return None
+    else:
+        return cache[key]["value"]
+
+def HasExpired(key):
+    """
+        检查缓存数据是否过期
+        :param key: 缓存数据的key
+        :return: 是否过期
+    """
     if key in cache.keys():
         time = cache[key]["time"]
         time_diff = datetime.now() - time
         if time_diff.seconds > cache[key]["timeout"]:
-            cache[key] = None
-            return None
+            del cache[key]
+            return True
         else:
-            return cache[key]["value"]
+            return False
+    return True
+
+

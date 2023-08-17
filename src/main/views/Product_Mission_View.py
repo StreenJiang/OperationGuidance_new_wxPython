@@ -75,11 +75,7 @@ class ProductMissionView(widgets.CustomViewPanel):
         # 创建展示块
         for index in range(len(data)):
             mission_obj = data[index]
-            mission_name = mission_obj.GetMissionName()
-            mission_image = mission_obj.GetMissionProductSides()[0].GetSideImage().GetImageOriginal()
-            mission_image = CommonUtils.PILImageToWxImage(mission_image).ConvertToBitmap()
-            mission_block = self.block_panel.add_block(mission_name = mission_name,
-                                                       mission_image = mission_image)
+            mission_block = self.block_panel.add_block(mission_obj)
             mission_block.Bind(wx.EVT_LEFT_UP, self.mission_block_click)
             mission_block.Refresh()
             self.mission_blocks.append(mission_block)
@@ -93,6 +89,11 @@ class ProductMissionView(widgets.CustomViewPanel):
     def on_size(self, event):
         self.SetMargin(self.GetSize()[1] * 0.02)
         super().on_size(event)
+
+        # 判断缓存数据是否过期，过期的话则清除界面元素（以防用户不在当前界面却已经需要对界面进行频繁重绘）
+        if self.block_panel is not None and self.data_has_expired():
+            self.block_panel.Destroy()
+            self.block_panel = None
 
         # 手动触发children的on_size事件
         if self.block_panel is not None:
@@ -169,6 +170,10 @@ class ProductMissionView(widgets.CustomViewPanel):
         self.data = data
         return data
 
+    # 检查缓存数据是否过期
+    def data_has_expired(self):
+        return CacheUtil.HasExpired(MISSION_DATA_CACHE_KEY)
+
     def calc_add_button(self):
         width, height = self.GetSize()
         return width / 6.5, height / 10
@@ -193,7 +198,9 @@ class ProductMissionView(widgets.CustomViewPanel):
 
         if eventObj.view is None:
             eventObj.view = WorkplaceView(topParent, wx.ID_ANY, pos = (0, 0),
-                                          size = topParent.GetClientSize(), title = self.menu_name)
+                                          size = topParent.GetClientSize(),
+                                          title = self.menu_name,
+                                          mission_obj = eventObj.mission_obj)
         else:
             eventObj.view.Show()
 
@@ -207,9 +214,9 @@ class MissionBlocksPanel(wx.Panel):
 
         self.Bind(wx.EVT_SIZE, self.on_size)
 
-    def add_block(self, mission_name, mission_image):
+    def add_block(self, mission_obj):
         # 创建任务展示块
-        mission_block = MissionBlock(self, wx.ID_ANY, mission_name = mission_name, mission_image = mission_image)
+        mission_block = MissionBlock(self, wx.ID_ANY, mission_obj = mission_obj)
         # 初始化视图变量
         mission_block.view = None
         # 存入数组
@@ -252,13 +259,14 @@ class MissionBlocksPanel(wx.Panel):
 
 # 每一个单独的任务块panel，封装起来更易读、易用、易维护
 class MissionBlock(widgets.CustomBorderPanel):
-    def __init__(self, parent, id = -1, pos = wx.DefaultPosition, size = wx.DefaultSize,
-                 mission_name = None, mission_image = None):
+    def __init__(self, parent, id = -1, pos = wx.DefaultPosition, size = wx.DefaultSize, mission_obj = None):
         widgets.CustomBorderPanel.__init__(self, parent, id, border_color = configs.COLOR_CONTENT_BLOCK_BORDER_1,
                                            pos = pos, size = size, border_thickness = 1, margin = 0, name = "MissionBlock")
         self.SetBackgroundColour(configs.COLOR_CONTENT_BLOCK_BACKGROUND)
-        self.mission_name = mission_name
-        self.mission_image = mission_image
+        self.mission_obj = mission_obj
+        self.mission_name = mission_obj.GetMissionName()
+        mission_image = mission_obj.GetMissionProductSides()[0].GetSideImage().GetImageOriginal()
+        self.mission_image = CommonUtils.PILImageToWxImage(mission_image).ConvertToBitmap()
 
         self.panel = wx.Panel(self, wx.ID_ANY)
         self.inner_sizer.Add(self.panel, 1, wx.EXPAND | wx.ALL)

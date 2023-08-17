@@ -99,11 +99,11 @@ class CustomGenBitmapTextToggleButton(buttons.GenBitmapTextToggleButton):
             # make bitmap adjust the size of button itself
             if self.custom_style == BUTTON_STYLE_HORIZONTAL:
                 img = bmp.ConvertToImage()
-                img.Rescale(math.ceil(height / 3 + width / 45), math.ceil(height / 3 + width / 45), wx.IMAGE_QUALITY_HIGH)
+                img.Rescale(math.ceil(height / 4.5 + width / 45), math.ceil(height / 4.5 + width / 45), wx.IMAGE_QUALITY_HIGH)
                 bmp = wx.Bitmap(img)
             else:
                 img = bmp.ConvertToImage()
-                img.Rescale(math.ceil(height / 2.7), math.ceil(height / 2.7), wx.IMAGE_QUALITY_HIGH)
+                img.Rescale(math.ceil(height / 3.3), math.ceil(height / 3.3), wx.IMAGE_QUALITY_HIGH)
                 bmp = wx.Bitmap(img)
 
             bw, bh = bmp.GetWidth(), bmp.GetHeight()
@@ -118,7 +118,7 @@ class CustomGenBitmapTextToggleButton(buttons.GenBitmapTextToggleButton):
             # handle the font, make it adjust the size
             font_temp = self.GetFont()
             font_temp.SetWeight(wx.FONTWEIGHT_BOLD)
-            font_temp.SetPointSize(int(width / 25 + height / 9) + 1)
+            font_temp.SetPointSize(int(width / 35 + height / 10) + 1)
             dc.SetFont(font_temp)
             dc.SetTextForeground(self.label_color)
 
@@ -129,15 +129,15 @@ class CustomGenBitmapTextToggleButton(buttons.GenBitmapTextToggleButton):
 
             pos_x = width / 10 + (width - tw) / 20 # adjust for bitmap and text to centre
             if bmp is not None:
-                dc.DrawBitmap(bmp, pos_x, (height - bh - (bh / 100 * 10)) / 2 + dy, hasMask)  # draw bitmap if available
-                pos_x = pos_x + (width / 15)  # extra spacing from bitmap
+                dc.DrawBitmap(bmp, pos_x + dx, (height - bh - (bh / 100 * 2)) / 2 + dy, hasMask)  # draw bitmap if available
+                pos_x = pos_x + (width / 18)  # extra spacing from bitmap
 
             dc.DrawText(label, pos_x + bw + dx, (height - th) / 2 + dy)  # draw the text
         else:
             # handle the font, make it adjust the size
             font_temp = self.GetFont()
             font_temp.SetWeight(wx.FONTWEIGHT_BOLD)
-            font_temp.SetPointSize(int(height / 8) + 1)
+            font_temp.SetPointSize(int(height / 10) + 1)
             dc.SetFont(font_temp)
             dc.SetTextForeground(self.label_color)
 
@@ -146,12 +146,12 @@ class CustomGenBitmapTextToggleButton(buttons.GenBitmapTextToggleButton):
             if not self.up:
                 dx = dy = self.labelDelta
 
-            pos_y = (height - bh - th) / 2 + dy  # adjust for bitmap and text to centre
+            pos_y = (height - bh - th * 1.5) / 2 + dy  # adjust for bitmap and text to centre
             if bmp is not None:
-                dc.DrawBitmap(bmp, (width - bw - (bw / 100 * 10)) / 2 + dx, pos_y, hasMask)  # draw bitmap if available
+                dc.DrawBitmap(bmp, (width - bw - (bw / 100 * 5)) / 2 + dx, pos_y + dy, hasMask)  # draw bitmap if available
                 pos_y = pos_y + (height / 50)  # extra spacing from bitmap
 
-            dc.DrawText(label, (width - tw) / 2 + dx, pos_y + bh + dy)  # draw the text
+            dc.DrawText(label, (width - tw) / 2 + dx, pos_y + bh * 1.1 + dy)  # draw the text
 
 
 # 自定义菜单按钮（用panel模拟按钮，以实现子菜单的左侧选中效果）
@@ -304,7 +304,7 @@ class CustomMenuButton(wx.Panel):
         self.button.SetPosition((x, y))
 
     def get_width_reduction(self, width):
-        return math.floor(width * 0.06)
+        return math.floor(width * 0.04)
 
 
 # 自定义圆角按钮的类型

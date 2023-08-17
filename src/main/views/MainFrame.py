@@ -127,7 +127,10 @@ class MainFrame(wx.Frame):
     def set_up_main_content_panel(self, menu_content_panel):
         main_menu = menu_content_panel.parent_menu
 
-        if len(main_menu.childrenMenus) > 0:
+        if len(main_menu.childrenMenus) == 0:
+            # 如果没有子菜单，则初始化content_panel
+            menu_content_panel.set_up_content_panel()
+        else:
             main_menu.menu_buttons = []
             child_menu_panel = ChildMenuPanel(menu_content_panel)
             menu_content_panel.add_child_button_panel(child_menu_panel)
@@ -166,9 +169,6 @@ class MainFrame(wx.Frame):
 
                     # 根据每个菜单的view配置，绘制对应的view
                     self.draw_view(child_btn_temp)
-        else:
-            # 如果没有子菜单，则初始化content_panel
-            menu_content_panel.set_up_content_panel()
 
     # 绘制view
     def draw_view(self, menu_button):
@@ -441,16 +441,16 @@ class ChildMenuPanel(wx.Panel):
 
     def calc_self(self):
         p_w, p_h = self.GetParent().GetSize()
-        return (math.ceil(0.13 * p_w), p_h), (0, 0)
+        return (math.ceil(0.11 * p_w), p_h), (0, 0)
 
     def calc_button(self, index):
         w, h = self.GetSize()
         b_w = w
-        b_h = math.ceil(h * 0.08)
+        b_h = math.ceil(h * 0.07)
         return (b_w, b_h), (0, index * b_h)
 
     def calc_content(self, p_w, p_h):
-        child_menu_w = math.ceil(0.13 * p_w)
+        child_menu_w = math.ceil(0.11 * p_w)
         new_w = p_w - child_menu_w
         return (new_w, p_h), (child_menu_w, 0)
 

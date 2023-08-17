@@ -7,7 +7,7 @@ PATH_FILE_LOG = [                                   # 日志文件存储路径�
 ]
 
 LENGTH_MAIN_MENU = 5                                # 主菜单名称字数
-LENGTH_CHILD_MENU = 5                               # 子菜单名称字数
+LENGTH_CHILD_MENU = 7                               # 子菜单名称字数
 PATH_LOGO_IMAGE = "configs/icons/logo.png"          # logo图片存储路径
 
 COLOR_SYSTEM_LOGO = "#E86C10"                       # 默认参数 - 颜色 - logo颜色（主题色）
