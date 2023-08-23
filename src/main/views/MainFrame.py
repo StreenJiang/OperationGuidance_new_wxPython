@@ -12,7 +12,11 @@ from src.main.utils import CommonUtils
 # 主窗体类
 class MainFrame(wx.Frame):
     def __init__(self, parent = None, id = None, variables = None):
-        wx.Frame.__init__(self, parent = parent, id = id, style = wx.DEFAULT_FRAME_STYLE)
+        wx.Frame.__init__(
+            self, parent = parent, id = id,
+            # style = wx.SYSTEM_MENU,
+            style = wx.DEFAULT_FRAME_STYLE,
+        )
         # 系统参数
         self.sys_variables = variables
 
@@ -69,6 +73,11 @@ class MainFrame(wx.Frame):
         self.mouse_down = False
         self.main_frame_release_mouse(self)
 
+        # 主动触发size事件，使界面自动调整布局
+        event_temp = wx.SizeEvent((0, 0))
+        event_temp.SetEventObject(self)
+        self.GetEventHandler().ProcessEvent(event_temp)
+
     def main_frame_release_mouse(self, obj):
         if len(obj.GetChildren()) > 0:
             for child in obj.GetChildren():
@@ -119,9 +128,7 @@ class MainFrame(wx.Frame):
                 self.main_menus.append(btn_temp)
 
         # 添加logo图片
-        self.main_menu_panel.add_logo(wx.Image(configs.PATH_LOGO_IMAGE, wx.BITMAP_TYPE_ANY).ConvertToBitmap())
-        # 绑定事件
-        self.bind_dragging_event(self.main_menu_panel.logo_static_bitmap)
+        self.main_menu_panel.set_logo(wx.Image(configs.PATH_LOGO_IMAGE, wx.BITMAP_TYPE_ANY).ConvertToBitmap())
 
     # 初始化主体内容panel
     def set_up_main_content_panel(self, menu_content_panel):
@@ -261,10 +268,10 @@ class MainFrame(wx.Frame):
     # 主窗口大小变化时，所有界面元素都需要调整
     def main_frame_on_size(self, event):
         self.main_panel.Freeze()
-        wx.CallLater(100, self.layout_after)
+        wx.CallLater(100, self.resize_after)
         event.Skip()
 
-    def layout_after(self):
+    def resize_after(self):
         # 稍稍滞后，效果看起来更好
         print("main_frame_on_size, Resolution: ", self.GetClientSize())
         self.main_panel.SetSize(self.GetClientSize())  # hide之后再show不知道为啥不跟着self一起变了，直接设置吧
@@ -309,7 +316,6 @@ class MainFrame(wx.Frame):
         widget_obj.Bind(wx.EVT_LEFT_UP, self.window_dragging_mouse_l_up)
 
 
-
 # 主菜单panel组件
 class MainMenuPanel(wx.Panel):
     def __init__(self, parent, id = wx.ID_ANY, pos = wx.DefaultPosition,
@@ -318,8 +324,8 @@ class MainMenuPanel(wx.Panel):
         self.SetBackgroundColour(configs.COLOR_MENU_BACKGROUND)
         self.menu_buttons = []
         self.logo_bitmap = None
-        self.logo_static_bitmap = None
         self.Bind(wx.EVT_SIZE, self.on_size)
+        self.Bind(wx.EVT_PAINT, self.on_paint)
 
     def on_size(self, event):
         # 计算自身size和pos
@@ -338,6 +344,11 @@ class MainMenuPanel(wx.Panel):
             if btn.menu_content_panel is not None:
                 btn.menu_content_panel.on_size(event)
 
+        event.Skip()
+
+    def on_paint(self, event):
+        dc = wx.GCDC(wx.PaintDC(self))
+
         # 重设logo的size和pos
         if self.logo_bitmap is not None:
             image = self.logo_bitmap.ConvertToImage()
@@ -345,12 +356,12 @@ class MainMenuPanel(wx.Panel):
             i_size, i_pos = self.calc_logo(image.GetSize())
             # 重新设置图片的尺寸
             image.Rescale(i_size[0], i_size[1], wx.IMAGE_QUALITY_BILINEAR)
-            # 重新设置bitmap
-            self.logo_static_bitmap.SetBitmap(wx.Bitmap(image))
-            # 重新设置pos
-            self.logo_static_bitmap.SetPosition(i_pos)
+            # 重新绘制bitmap
+            bitmap = wx.Bitmap(image)
+            dc.DrawBitmap(bitmap, i_pos, bitmap.GetMask() is not None)
 
-        event.Skip()
+        # 删除DC
+        del dc
 
     def add_menu_button(self, icon, label, is_toggled):
         btn_temp = widgets.CustomMenuButton(
@@ -368,9 +379,8 @@ class MainMenuPanel(wx.Panel):
         self.menu_buttons.append(btn_temp)
         return btn_temp
 
-    def add_logo(self, bitmap):
+    def set_logo(self, bitmap):
         self.logo_bitmap = bitmap
-        self.logo_static_bitmap = wx.StaticBitmap(self, wx.ID_ANY)
 
     def calc_self(self):
         p_w, p_h = self.GetParent().GetSize()
@@ -383,9 +393,9 @@ class MainMenuPanel(wx.Panel):
 
     def calc_logo(self, image_size):
         w, h = self.GetSize()
-        l_w, l_h = image_size
-        l_w, l_h = CommonUtils.CalculateNewSizeWithSameRatio((l_w, l_h), h * 0.7 / l_h)
-        return (l_w, l_h), (w - l_w - math.ceil(w / 300), math.ceil((h - l_h) / 2))
+        i_w, i_h = image_size
+        i_w, i_h = CommonUtils.CalculateNewSizeWithSameRatio((i_w, i_h), h * 0.7 / i_h)
+        return (i_w, i_h), (w - i_w - math.ceil(w / 300), math.ceil((h - i_h) / 2))
 
     def calc_content(self, p_w, p_h):
         main_menu_h = math.ceil(0.12 * p_h)

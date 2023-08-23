@@ -23,7 +23,9 @@ COLOR_CONTENT_PANEL_INSIDE_BORDER = "#DDDDDD"       # 默认参数 - 颜色 - �
 
 COLOR_TEXT_BLACK = "#222222"                        # 默认参数 - 颜色 - 文本颜色_黑色（不是纯黑，有一丁点的灰，但是几乎看不出来）
 COLOR_TEXT_THEME = COLOR_SYSTEM_LOGO                # 默认参数 - 颜色 - 文本颜色_主题色
-COLOR_MAIN_MENU_TEXT = "#FEFEFE"                    # 默认参数 - 颜色 - 菜单条上的文本颜色_白色
+COLOR_TEXT_MAIN_MENU = "#FEFEFE"                    # 默认参数 - 颜色 - 菜单条上的文本颜色_白色
+COLOR_TEXT_CONTROL_BACKGROUND = "#FEFEFE"           # 默认参数 - 颜色 - 文本框背景颜色
+COLOR_TEXT_CONTROL_FONT = "#666666"                 # 默认参数 - 颜色 - 文本框字体颜色
 
 COLOR_CONTENT_BLOCK_BORDER_1 = COLOR_SYSTEM_LOGO    # 默认参数 - 颜色 - 内容块颜色边框_1_主题色
 COLOR_CONTENT_BLOCK_BORDER_2 = "#AAAAAA"            # 默认参数 - 颜色 - 内容块颜色边框_2_淡灰色
@@ -34,3 +36,7 @@ COLOR_BUTTON_TEXT = "#FEFEFE"                       # 默认参数 - 颜色 - �
 COLOR_BUTTON_BACKGROUND = COLOR_SYSTEM_LOGO         # 默认参数 - 颜色 - 按钮背景色_主题色
 COLOR_BUTTON_FOCUSED = "#F19753"                    # 默认参数 - 颜色 - 按钮捕捉到鼠标时的颜色
 COLOR_BUTTON_CLICKED = "#D05900"                    # 默认参数 - 颜色 - 按钮按下的颜色
+
+COLOR_DEVICE_BUTTON_HOVER = "#DDDDDD"               # 默认参数 - 颜色 - 设备小图标按钮鼠标移上时的颜色
+COLOR_DEVICE_BUTTON_CLICKED = "#DDDDDD"             # 默认参数 - 颜色 - 设备小图标按钮鼠标按下时的颜色
+COLOR_DEVICE_BUTTON_ACTIVATED = "#CCCCCC"           # 默认参数 - 颜色 - 设备小图标按钮被激活时的颜色

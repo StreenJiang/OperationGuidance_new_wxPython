@@ -7,11 +7,8 @@ import src.main.configs as configs
 from src.main.controllers import apis
 from src.main.utils import CommonUtils, CacheUtil
 from src.main.views.Content_Workplace import WorkplaceView
+from src.main.enums.Cache import CacheEnum as cache
 
-
-# 任务数据缓存配置
-MISSION_DATA_CACHE_KEY = "MISSION_DATA"
-MISSION_DATA_CACHE_TIME_OUT = 120 # 数据缓存过期时间（秒）
 
 # 任务列表展示界面的gridSizer的列数固定为4
 MISSION_COLUMNS = 4
@@ -30,7 +27,6 @@ class ProductMissionView(widgets.CustomViewPanel):
                  style = 0, name = "ProductMissionView", menu_name = ""):
         widgets.CustomViewPanel.__init__(self, parent, id, pos, size, style, name, menu_name)
         self.menu_name = menu_name
-        self.call_back_variables = None
         self.add_mission_button = None
         self.block_panel = None
         self.mission_blocks = []
@@ -141,18 +137,14 @@ class ProductMissionView(widgets.CustomViewPanel):
         self.data_changed = False
 
         # 从缓存中读取数据
-        data = CacheUtil.Get(MISSION_DATA_CACHE_KEY)
+        data = CacheUtil.Get(cache.MISSION_DATA.value["key"])
 
         # 如果缓存中的数据为空，则重新调用API查询数据
         if data is None:
-            # 调用后端API
-            apis.API_GET_PRODUCT_MISSIONS(self)
-            # 从后端返回的数据中提取需要的数据
-            data = self.call_back_variables["data"]
+            # 调用后端API获取数据
+            data = apis.API_GET_PRODUCT_MISSIONS(self)
             # 将数据存入缓存
-            CacheUtil.Set(MISSION_DATA_CACHE_KEY, data, timeout = MISSION_DATA_CACHE_TIME_OUT)
-            # 删除临时参数
-            del self.call_back_variables
+            CacheUtil.Set(cache.MISSION_DATA.value["key"], data, timeout = cache.MISSION_DATA.value["timeout"])
 
         # 如果处理后返回的数据还是空，则需要返回一个空数组，方便判断
         if data is None:
@@ -172,7 +164,7 @@ class ProductMissionView(widgets.CustomViewPanel):
 
     # 检查缓存数据是否过期
     def data_has_expired(self):
-        return CacheUtil.HasExpired(MISSION_DATA_CACHE_KEY)
+        return CacheUtil.HasExpired(cache.MISSION_DATA.value["key"])
 
     def calc_add_button(self):
         width, height = self.GetSize()

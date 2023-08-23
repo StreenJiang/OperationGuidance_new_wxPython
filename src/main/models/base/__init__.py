@@ -71,31 +71,23 @@ class BaseEntity:
 
     def SetCreator(self, creator: str):
         self.__creator = creator
-
     def SetCreateTime(self, create_time: str):
         self.__create_time = create_time
-
     def SetLastUpdater(self, last_updater: str):
         self.__last_updater = last_updater
-
     def SetLastUpdateTime(self, last_update_time: str):
         self.__last_update_time = last_update_time
-
     def Delete(self, flag: bool):
         self.__is_deleted = flag
 
     def GetCreator(self) -> str:
         return self.__creator
-
     def GetCreateTime(self) -> str:
         return self.__create_time
-
     def GetLastUpdater(self) -> str:
         return self.__last_updater
-
     def GetLastUpdateTime(self) -> str:
         return self.__last_update_time
-
     def IsDelete(self) -> bool:
         return self.__is_deleted
 

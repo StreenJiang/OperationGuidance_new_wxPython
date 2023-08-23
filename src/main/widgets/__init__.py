@@ -447,7 +447,7 @@ class CustomRadiusButton(buttons.GenBitmapButton):
             font_temp.SetPointSize(int(w / 12 + h / 5) + 1)
         dc.SetFont(font_temp)
         tw, th = dc.GetTextExtent(label)
-        dc.DrawText(label, (w - tw) // 2, (h - th) // 2)
+        dc.DrawText(label, (w - tw) // 2, (h - th) // 2 - th / 25)
         # 删除DC
         del dc
 
@@ -508,6 +508,9 @@ class CustomStaticBox(wx.StaticBox):
     def SetMargin(self, margin):
         self.margin = margin
 
+    def SetRadius(self, radius):
+        self.radius = radius
+
     def SetBordersForSizer(self, border_extra):
         self.border_extra = border_extra
 
@@ -534,6 +537,7 @@ class CustomBorderPanel(wx.Panel):
         super().SetSizer(self.inner_sizer)
 
         self.border_thickness = border_thickness
+        self.radius = radius
         self.border_color = border_color
         self.margin = margin
         self.border_extra = border_extra
@@ -567,6 +571,10 @@ class CustomBorderPanel(wx.Panel):
     def SetMargin(self, margin):
         self.margin = margin
         self.staticBox.SetMargin(margin)
+
+    def SetRadius(self, radius):
+        self.radius = radius
+        self.staticBox.SetRadius(radius)
 
     def GetMargin(self):
         return self.margin
@@ -610,74 +618,3 @@ class CustomViewPanel(wx.Panel):
     def GetMargin(self):
         return self.margin
 
-
-# 菜单panel里的logo组件
-class LogoPanel(wx.Panel):
-    def __init__(self, parent, id = wx.ID_ANY, pos = wx.DefaultPosition, image_ratio = 70, # 图片比例，单位%
-                 size = wx.DefaultSize, style = 0, name = "CustomMenuButton"):
-        wx.Panel.__init__(self, parent, id, pos = pos, size = size, style = style, name = name)
-        self.image_ratio = image_ratio
-        self.logo_img_png = wx.Image(configs.PATH_LOGO_IMAGE, wx.BITMAP_TYPE_ANY)
-        # self.logo_img_static = wx.StaticBitmap(self, wx.ID_ANY, self.logo_img_png.ConvertToBitmap())
-
-        # # 添加一个sizer让图片右对齐
-        # self.sizer = wx.BoxSizer(wx.VERTICAL) # 由于右对齐对水平sizer不生效因此加一个垂直sizer
-        # self.sizer.Add(self.logo_img_static, 1, wx.RIGHT | wx.ALIGN_RIGHT, border = 5)
-        # self.SetSizer(self.sizer)
-        # self.Layout()
-
-        # 绑定on_size事件
-        # self.Bind(wx.EVT_SIZE, self.on_size)
-        self.Bind(wx.EVT_PAINT, self.on_paint)
-        # self.logo_img_static.Bind(wx.EVT_MOTION, self.process_parent_event)
-        # self.logo_img_static.Bind(wx.EVT_LEFT_DOWN, self.process_parent_event)
-        # self.logo_img_static.Bind(wx.EVT_LEFT_UP, self.process_parent_event)
-
-    # 调用父类对应的事件（因为这个组件其实是真正的自定义组件（一个panel假装的）的内部组件，
-    # 正常情况下会在父组件的上方，因此事件触发基本上都是触发此对象，而实际代码逻辑中绑定时都是绑定父对象，因此要向上传递
-    def process_parent_event(self, event):
-        event.SetEventObject(self)
-        self.GetEventHandler().ProcessEvent(event)
-        event.Skip()
-
-    def on_size(self, event):
-        # 复制一个wx.Image，以免多次Rescale导致图片失真
-        log_temp = self.logo_img_png.Copy()
-
-        # 重新根据当前父panel的size计算新的图片size及图片右边的border
-        logo_img_width, logo_img_height, border = self.calculate_logo_img_size()
-        log_temp.Rescale(logo_img_width, logo_img_height, wx.IMAGE_QUALITY_BILINEAR)
-
-        # # 设置新的bitmap
-        # self.logo_img_static.SetBitmap(log_temp.ConvertToBitmap())
-        # # 设定新的border
-        # self.sizer.GetChildren()[0].SetBorder(border)
-
-        # 刷新一下布局
-        self.Layout()
-        event.Skip()
-
-
-    def on_paint(self, event):
-        dc = wx.GCDC(wx.PaintDC(self))
-
-        # 复制一个wx.Image，以免多次Rescale导致图片失真
-        log_temp = self.logo_img_png.Copy()
-
-        # 重新根据当前父panel的size计算新的图片size及图片右边的border
-        logo_img_width, logo_img_height, border = self.calculate_logo_img_size()
-        log_temp.Rescale(logo_img_width, logo_img_height, wx.IMAGE_QUALITY_BILINEAR)
-
-        bitmap = log_temp.ConvertToBitmap()
-        dc.DrawBitmap(bitmap, 0, 0, bitmap.GetMask() is not None)
-
-        del dc
-        event.Skip()
-
-
-    # 重新根据当前父panel的size计算新的图片size及图片右边的border
-    def calculate_logo_img_size(self):
-        p_width, p_height = self.GetParent().GetSize()
-        img_size = self.logo_img_png.GetSize()
-        width, height = CommonUtils.CalculateNewSizeWithSameRatio(img_size, p_height * (self.image_ratio / 100) / img_size[1])
-        return width, height, p_width / 200
