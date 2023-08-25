@@ -10,6 +10,10 @@ LENGTH_MAIN_MENU = 5                                # 主菜单名称字数
 LENGTH_CHILD_MENU = 7                               # 子菜单名称字数
 PATH_LOGO_IMAGE = "configs/icons/logo.png"          # logo图片存储路径
 
+COLOR_COMMON_GREEN = "#2AB514"                      # 默认参数 - 颜色 - 通用绿色
+COLOR_COMMON_WHITE = "#FEFEFE"                      # 默认参数 - 颜色 - 通用白色
+COLOR_COMMON_RED = "#F01414"                        # 默认参数 - 颜色 - 通用红色
+
 COLOR_SYSTEM_LOGO = "#E86C10"                       # 默认参数 - 颜色 - logo颜色（主题色）
 COLOR_SYSTEM_BACKGROUND = "#F0F0F0"                 # 默认参数 - 颜色 - 系统背景颜色
 
@@ -23,16 +27,16 @@ COLOR_CONTENT_PANEL_INSIDE_BORDER = "#DDDDDD"       # 默认参数 - 颜色 - �
 
 COLOR_TEXT_BLACK = "#222222"                        # 默认参数 - 颜色 - 文本颜色_黑色（不是纯黑，有一丁点的灰，但是几乎看不出来）
 COLOR_TEXT_THEME = COLOR_SYSTEM_LOGO                # 默认参数 - 颜色 - 文本颜色_主题色
-COLOR_TEXT_MAIN_MENU = "#FEFEFE"                    # 默认参数 - 颜色 - 菜单条上的文本颜色_白色
-COLOR_TEXT_CONTROL_BACKGROUND = "#FEFEFE"           # 默认参数 - 颜色 - 文本框背景颜色
+COLOR_TEXT_MAIN_MENU = COLOR_COMMON_WHITE           # 默认参数 - 颜色 - 菜单条上的文本颜色_白色
+COLOR_TEXT_CONTROL_BACKGROUND = COLOR_COMMON_WHITE  # 默认参数 - 颜色 - 文本框背景颜色
 COLOR_TEXT_CONTROL_FONT = "#666666"                 # 默认参数 - 颜色 - 文本框字体颜色
 
 COLOR_CONTENT_BLOCK_BORDER_1 = COLOR_SYSTEM_LOGO    # 默认参数 - 颜色 - 内容块颜色边框_1_主题色
 COLOR_CONTENT_BLOCK_BORDER_2 = "#AAAAAA"            # 默认参数 - 颜色 - 内容块颜色边框_2_淡灰色
 COLOR_CONTENT_BLOCK_BORDER_3 = "#222222"            # 默认参数 - 颜色 - 内容块颜色边框_3_黑色（不是纯黑，有一丁点的灰，但是几乎看不出来）
-COLOR_CONTENT_BLOCK_BACKGROUND = "#FEFEFE"          # 默认参数 - 颜色 - 内容块背景颜色
+COLOR_CONTENT_BLOCK_BACKGROUND = COLOR_COMMON_WHITE # 默认参数 - 颜色 - 内容块背景颜色
 
-COLOR_BUTTON_TEXT = "#FEFEFE"                       # 默认参数 - 颜色 - 按钮文本颜色
+COLOR_BUTTON_TEXT = COLOR_COMMON_WHITE              # 默认参数 - 颜色 - 按钮文本颜色
 COLOR_BUTTON_BACKGROUND = COLOR_SYSTEM_LOGO         # 默认参数 - 颜色 - 按钮背景色_主题色
 COLOR_BUTTON_FOCUSED = "#F19753"                    # 默认参数 - 颜色 - 按钮捕捉到鼠标时的颜色
 COLOR_BUTTON_CLICKED = "#D05900"                    # 默认参数 - 颜色 - 按钮按下的颜色

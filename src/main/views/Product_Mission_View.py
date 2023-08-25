@@ -4,7 +4,7 @@ import wx
 
 import src.main.widgets as widgets
 import src.main.configs as configs
-from src.main.controllers import apis
+from src.main.controllers import ProductMissionService as productMissionService
 from src.main.utils import CommonUtils, CacheUtil
 from src.main.views.Content_Workplace import WorkplaceView
 from src.main.enums.Cache import CacheEnum as cache
@@ -142,7 +142,7 @@ class ProductMissionView(widgets.CustomViewPanel):
         # 如果缓存中的数据为空，则重新调用API查询数据
         if data is None:
             # 调用后端API获取数据
-            data = apis.API_GET_PRODUCT_MISSIONS(self)
+            data = productMissionService.get_all_missions(self)
             # 将数据存入缓存
             CacheUtil.Set(cache.MISSION_DATA.value["key"], data, timeout = cache.MISSION_DATA.value["timeout"])
 

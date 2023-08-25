@@ -2,8 +2,9 @@ import wx
 import math
 
 from src.main import configs, widgets
-from src.main.controllers import apis
-from src.main.models import Device as dvs
+from src.main.controllers import DeviceService as deviceService
+from src.main.models import Device as dvs, ProductMission as pdctmsn
+from src.main.threads import Workplace_threads as wThread
 from src.main.utils import CommonUtils, CacheUtil
 from src.main.enums.Cache import CacheEnum as cache
 
@@ -11,6 +12,19 @@ from src.main.enums.Cache import CacheEnum as cache
 BACK_BUTTON_TEXT = "返回"
 # 条码框的扫码icon图片存储路径
 PATH_BAR_CODE_ICON = "configs/icons/bar_code_icon.png"
+
+# 全局变量
+
+# 全局方法
+# 向obj的thread_arr中添加线程
+def register_thread(obj, thread, *args, **kws):
+    thread_dict = {
+        "class": thread,
+        "args": args,
+        "kws": kws,
+        "obj": None
+    }
+    obj.threads_arr.append(thread_dict)
 
 
 class WorkplaceView(wx.Panel):
@@ -41,6 +55,9 @@ class WorkplaceView(wx.Panel):
         self.progress_result_data_panel = None
         self.product_sides_panel = None
 
+        # 线程集合，用来存整个界面需要运行的线程
+        self.threads_arr = []
+
         self.devices = None
         self.devices_changed = False
 
@@ -68,36 +85,19 @@ class WorkplaceView(wx.Panel):
         # 配置内容panel
         self.set_up_content_panel()
 
-
-        # self.top_menu_bar_panel = wx.Panel(self, wx.ID_ANY)
-        # self.top_menu_bar_panel.SetBackgroundColour(configs.COLOR_MENU_BACKGROUND)
-        # # 窗体拖动逻辑
-        # self.top_menu_bar_panel.mouse_pos = None  # 初始化鼠标定位参数
-        # self.bind_dragging_event(self.top_menu_bar_panel)
-        # # 设置顶部菜单条大小和位置
-        # bar_size, bar_pos = self.calc_menu_bar()
-        # self.top_menu_bar_panel.SetSize(bar_size)
-        # self.top_menu_bar_panel.SetPosition(bar_pos)
-        # # 添加顶部菜单条panel子组件
-        # self.add_top_menu_bar_child_widgets()
-        #
-        # # 添加一个灰色框框的内容主体panel
-        # self.content_panel = ContentPanel(self, wx.ID_ANY, border_thickness = 1, border_color = configs.COLOR_CONTENT_PANEL_INSIDE_BORDER)
-        # self.content_panel.SetBackgroundColour(configs.COLOR_CONTENT_PANEL_BACKGROUND)
-        # # 设置内容主体panel大小和位置
-        # pan_size, pan_pos = self.calc_content_panel()
-        # self.content_panel.SetSize(pan_size)
-        # self.content_panel.SetPosition(pan_pos)
-        # # 添加下方内容主体panel及其子组件
-        # self.add_content_panel_child_widgets()
-        #
         # 给主窗口绑定【窗口大小变化】事件，确保不同分辨率下，系统UI始终保持最佳比例
         self.is_resizing = False
         self.top_parent.Bind(wx.EVT_SIZE, self.main_frame_resizing)
         self.Bind(wx.EVT_SIZE, self.on_size)
+        self.Bind(wx.EVT_SHOW, self.on_show)
 
         # 刷新布局
         self.Layout()
+
+        # 主动触发一次show事件，因为新创建出来的第一次好像不触发（没深入研究原理，暂时先这样）
+        event_temp = wx.ShowEvent(id, True)
+        event_temp.SetEventObject(self)
+        self.GetEventHandler().ProcessEvent(event_temp)
 
     def set_up_top_menu_bar_panel(self):
         # 添加返回按钮
@@ -126,7 +126,8 @@ class WorkplaceView(wx.Panel):
         mission_image = CommonUtils.PILImageToWxImage(mission_image).ConvertToBitmap()
         self.product_image_panel = self.content_panel.add_middle_bottom(mission_image)
 
-        self.progress_status_panel = self.content_panel.add_right_top()
+        # 添加工作状态动态显示panel
+        self.progress_status_panel = self.content_panel.add_right_top(self.mission_obj)
 
         self.progress_result_data_panel = self.content_panel.add_right_center()
 
@@ -143,7 +144,7 @@ class WorkplaceView(wx.Panel):
         # 如果缓存中的数据为空，则重新调用API查询数据
         if devices is None:
             # 调用后端API获取数据
-            devices = apis.API_GET_DEVICES(self)
+            devices = deviceService.get_devices(self)
             # 将数据存入缓存
             CacheUtil.Set(cache.DEVICES.value["key"], devices, timeout = cache.DEVICES.value["timeout"])
 
@@ -190,6 +191,25 @@ class WorkplaceView(wx.Panel):
     def on_size(self, event):
         # 设置顶部菜单条大小和位置
         self.top_menu_bar_panel.SetSize(self.GetSize())
+        event.Skip()
+
+    def on_show(self, event):
+        if event.IsShown():
+            for thread_each in self.threads_arr:
+                thread_class = thread_each["class"]
+                args = thread_each["args"]
+                kws = thread_each["kws"]
+                t = thread_each["obj"]
+                if t is None or not t.is_alive():
+                    t = thread_class(*args, **kws)
+                    t.start()
+                    thread_each["obj"] = t
+        else:
+            for thread_each in self.threads_arr:
+                t = thread_each["obj"]
+                if t is not None and t.is_alive():
+                    t.stop()
+
         event.Skip()
 
     # 窗体拖拽事件 - 重新定位窗体位置
@@ -339,8 +359,6 @@ class TopMenuBarPanel(wx.Panel):
         return (i_w, i_h), (w - i_w - math.ceil(w / 300), math.ceil((h - i_h) / 2))
 
 
-
-
 # 下方内容的外层panel
 class ContentPanel(widgets.CustomBorderPanel):
     def __init__(self, parent, id = -1, border_thickness = 1,
@@ -425,8 +443,8 @@ class ContentPanel(widgets.CustomBorderPanel):
         self.panel_middle_bottom.set_product_image(bitmap)
         return self.panel_middle_bottom
 
-    def add_right_top(self):
-        self.panel_right_top = RightTopPanel(parent = self)
+    def add_right_top(self, mission_obj):
+        self.panel_right_top = RightTopPanel(parent = self, mission_obj = mission_obj)
         return self.panel_right_top
 
     def add_right_center(self):
@@ -741,6 +759,7 @@ class LeftPanel(widgets.CustomBorderPanel):
                 self.background_color = background_color
                 self.border_color = border_color
                 self.device_info_arr = []
+                self.size_cache = None
 
                 self.Bind(wx.EVT_SIZE, self.on_size)
                 self.Bind(wx.EVT_PAINT, self.on_paint)
@@ -751,26 +770,97 @@ class LeftPanel(widgets.CustomBorderPanel):
 
             def on_size(self, event):
                 # 计算自身size和pos（在逻辑上的父panel计算过了（实际上的父panel是DeviceBlock的父panel）)
+                if self.size_cache is not None and self.size_cache["panel_size"] != self.GetSize():
+                    self.size_cache = None
                 event.Skip()
 
             def on_paint(self, event):
                 if self.device_info_arr:
                     dc = wx.GCDC(wx.PaintDC(self))
-                    w, h = self.GetSize()
-
-                    # 设置画笔、画刷的颜色
-                    pen = wx.Pen(self.border_color, 1)
-                    dc.SetPen(pen)
-                    brush = wx.Brush(self.background_color)
-                    dc.SetBrush(brush)
-
-                    # 画出bitmap的形状
-                    dc.DrawRoundedRectangle(0, 0, w, h, 0)
 
                     info_len = len(self.device_info_arr)
-                    if info_len > 0:
-                        h_info = math.ceil(h / info_len)
-                        h_gap = 0
+                    if self.size_cache is None:
+                        w, h = self.GetSize()
+                        self.size_cache = {
+                            "panel_size": None,
+                            "size_pos_arr": None
+                        }
+
+                        # 设置画笔、画刷的颜色
+                        pen = wx.Pen(self.border_color, 1)
+                        dc.SetPen(pen)
+                        brush = wx.Brush(self.background_color)
+                        dc.SetBrush(brush)
+
+                        # 画出bitmap的形状
+                        dc.DrawRoundedRectangle(0, 0, w, h, 0)
+
+                        if info_len > 0:
+                            h_info = math.ceil(h / info_len)
+                            h_gap = 0
+                            self.size_cache["size_pos_arr"] = []
+                            for index in range(info_len):
+                                size_pos = {
+                                    "font_size": None,
+                                    "icon_size": None,
+                                    "icon_pos": None,
+                                    "text_pos": None
+                                }
+                                info = self.device_info_arr[index]
+
+                                # 重设device信息的font_size
+                                device_info = info["ip"] + "-" + str(info["port"])
+                                dc.SetTextForeground(configs.COLOR_TEXT_BLACK)
+                                font_temp = self.GetFont()
+                                font_size = self.calc_font_size(w, h_info)
+                                size_pos["font_size"] = font_size # 存入缓存
+                                font_temp.SetPointSize(font_size)
+                                dc.SetFont(font_temp)
+                                tw, th = dc.GetTextExtent(device_info)
+
+                                # 重设icon的size
+                                image = wx.Image(info["status_const"]["icon"], wx.BITMAP_TYPE_ANY)
+                                # 计算icon的size和pos
+                                bw, bh = self.calc_icon(w, h_info, image.GetSize())
+                                # 重新设置图片的尺寸
+                                size_pos["icon_size"] = (bw, bh) # 存入缓存
+                                image.Rescale(bw, bh, wx.IMAGE_QUALITY_HIGH)
+                                # 重新绘制bitmap
+                                bitmap = wx.Bitmap(image)
+
+                                # 计算并重设图片和文字的pos
+                                # 图标左侧的缩进
+                                w_indent = math.ceil(w / 40)
+                                # 如果有多个设备，则每个设备之间信息显示的gap
+                                h_gap = math.ceil((h_info - bh) / 2)
+                                b_x = math.ceil((w - tw - bw - w_indent) / 4)
+                                b_y = math.ceil((h_info - bh) / 2) + (h_info - h_gap) * index
+                                size_pos["icon_pos"] = (b_x, b_y) # 存入缓存
+                                dc.DrawBitmap(bitmap, (b_x, b_y), bitmap.GetMask() is not None)
+                                t_x = b_x + bw + w_indent
+                                t_y = math.ceil((h_info - th) / 2 - math.ceil(th / 20)) + (h_info - h_gap) * index
+                                size_pos["text_pos"] = (t_x, t_y) # 存入缓存
+                                dc.DrawText(device_info, (t_x, t_y))
+
+                                self.size_cache["size_pos_arr"].append(size_pos)
+
+                            # 将多余的高度去掉
+                            panel_size = (w, h - h_gap * (info_len - 1))
+                            self.size_cache["panel_size"] = (w, h - h_gap * (info_len - 1))
+                            self.SetSize(panel_size)
+                    else:
+                        w, h = self.size_cache["panel_size"]
+
+                        # 设置画笔、画刷的颜色
+                        pen = wx.Pen(self.border_color, 1)
+                        dc.SetPen(pen)
+                        brush = wx.Brush(self.background_color)
+                        dc.SetBrush(brush)
+
+                        # 画出bitmap的形状
+                        dc.DrawRoundedRectangle(0, 0, w, h, 0)
+
+                        size_pos_arr = self.size_cache["size_pos_arr"]
                         for index in range(info_len):
                             info = self.device_info_arr[index]
 
@@ -778,33 +868,23 @@ class LeftPanel(widgets.CustomBorderPanel):
                             device_info = info["ip"] + "-" + str(info["port"])
                             dc.SetTextForeground(configs.COLOR_TEXT_BLACK)
                             font_temp = self.GetFont()
-                            font_temp.SetPointSize(self.calc_font_size(w, h_info))
+                            font_temp.SetPointSize(size_pos_arr[index]["font_size"])
                             dc.SetFont(font_temp)
-                            tw, th = dc.GetTextExtent(device_info)
 
                             # 重设icon的size
                             image = wx.Image(info["status_const"]["icon"], wx.BITMAP_TYPE_ANY)
                             # 计算icon的size和pos
-                            bw, bh = self.calc_icon(w, h_info, image.GetSize())
+                            bw, bh = size_pos_arr[index]["icon_size"]
                             # 重新设置图片的尺寸
                             image.Rescale(bw, bh, wx.IMAGE_QUALITY_HIGH)
                             # 重新绘制bitmap
                             bitmap = wx.Bitmap(image)
 
                             # 计算并重设图片和文字的pos
-                            # 图标左侧的缩进
-                            w_indent = math.ceil(w / 40)
-                            # 如果有多个设备，则每个设备之间信息显示的gap
-                            h_gap = math.ceil((h_info - bh) / 2)
-                            b_x = math.ceil((w - tw - bw - w_indent) / 4)
-                            b_y = math.ceil((h_info - bh) / 2) + (h_info - h_gap) * index
+                            b_x, b_y = size_pos_arr[index]["icon_pos"]
                             dc.DrawBitmap(bitmap, (b_x, b_y), bitmap.GetMask() is not None)
-                            t_x = b_x + bw + w_indent
-                            t_y = math.ceil((h_info - th) / 2 - math.ceil(th / 20)) + (h_info - h_gap) * index
+                            t_x, t_y = size_pos_arr[index]["text_pos"]
                             dc.DrawText(device_info, (t_x, t_y))
-
-                        # 将多余的高度去掉
-                        self.SetSize(w, h - h_gap * (info_len - 1))
 
                     # 删除DC
                     del dc
@@ -969,12 +1049,19 @@ class MiddleBottomPanel(widgets.CustomBorderPanel):
 
 # 右侧上方的工作状态panel
 class RightTopPanel(widgets.CustomBorderPanel):
-    def __init__(self, parent, id = -1, border_thickness = 1,
+    def __init__(self, parent, id = -1, border_thickness = 1, mission_obj = None,
                  border_color = configs.COLOR_CONTENT_PANEL_INSIDE_BORDER, margin = 0, radius = 0):
         widgets.CustomBorderPanel.__init__(self, parent, id, border_thickness = border_thickness,
                                            border_color = border_color, margin = margin, radius = radius)
-        self.product_image = None
-        self.bolts = []
+        self.mission_obj = mission_obj
+        self.icon_clockwise = None
+        self.icon_anticlockwise = None
+        self.status = pdctmsn.STATUS_SCREW_GUN_DEFAULT
+        self.status_text = None
+        self.status_detail_text = None
+
+        register_thread(self.GetParent().GetParent(), wThread.WorkplaceMainThread, self, mission_obj)
+
 
 
 # 右侧中间的数据结果展示panel

@@ -5,6 +5,23 @@ from src.main.models.base import BaseEntity
 import src.main.utils.CommonUtils as CommonUtils
 
 
+# 任务状态
+STATUS_MISSION_DEFAULT = 0
+STATUS_MISSION_READY = 1
+STATUS_MISSION_WORKING = 2
+STATUS_MISSION_ERROR = 3
+STATUS_MISSION_FINISHED = 4
+
+# 螺丝孔位工作状态
+STATUS_SCREW_GUN_DEFAULT = 0
+STATUS_SCREW_GUN_TIGHTENING = 1
+STATUS_SCREW_GUN_TIGHTENING_COMPLETE = 2
+STATUS_SCREW_GUN_TIGHTENING_ERROR = 3
+STATUS_SCREW_GUN_LOOSENING = 4
+STATUS_SCREW_GUN_LOOSENING_COMPLETE = 5
+STATUS_SCREW_GUN_LOOSENING_ERROR = 6
+
+
 # 产品任务实体（里面还有嵌套的list实体、图片实体，是子类，在下面）
 class ProductMission(BaseEntity):
     def __init__(self,
@@ -15,6 +32,7 @@ class ProductMission(BaseEntity):
                  mission_product_sides: list,
                  creator,
                  last_updater,
+                 mission_indexs = (0, 0),
                  create_time = CommonUtils.System_Current_Datetime(),
                  last_update_time = CommonUtils.System_Current_Datetime(),
                  is_deleted = False):
@@ -23,7 +41,7 @@ class ProductMission(BaseEntity):
         self.__mission_name = mission_name                      # 任务名称
         self.__mission_pn_code = mission_pn_code                # PN码
         self.__mission_status = mission_status                  # 任务状态
-
+        self.__mission_indexs = mission_indexs                  # 当前正在进行操作的产品面/孔位的indexs
         CommonUtils.CheckArgumentType(mission_product_sides, list)
         for side in mission_product_sides:
             CommonUtils.CheckArgumentType(side, ProductSides)
@@ -37,6 +55,8 @@ class ProductMission(BaseEntity):
         self.__mission_pn_code = mission_pn_code
     def SetMissionStatus(self, mission_status: int):
         self.__mission_status = mission_status
+    def SetMissionIndexs(self, mission_indexs: tuple):
+        self.__mission_indexs = mission_indexs
     def SetMissionProductSides(self, mission_product_sides: list):
         CommonUtils.CheckArgumentType(mission_product_sides, list)
         for side in mission_product_sides:
@@ -51,6 +71,8 @@ class ProductMission(BaseEntity):
         return self.__mission_pn_code
     def GetMissionStatus(self) -> int:
         return self.__mission_status
+    def GetMissionIndexs(self) -> tuple:
+        return self.__mission_indexs
     def GetMissionProductSides(self) -> list:
         return self.__mission_product_sides
 
