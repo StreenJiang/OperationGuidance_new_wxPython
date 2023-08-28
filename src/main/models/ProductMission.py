@@ -25,17 +25,17 @@ STATUS_SCREW_GUN_LOOSENING_ERROR = 6
 # 产品任务实体（里面还有嵌套的list实体、图片实体，是子类，在下面）
 class ProductMission(BaseEntity):
     def __init__(self,
-                 id,
+                 id: int,
                  mission_name: str,
                  mission_pn_code: str,
                  mission_status: int,
                  mission_product_sides: list,
-                 creator,
-                 last_updater,
-                 mission_indexs = (0, 0),
-                 create_time = CommonUtils.System_Current_Datetime(),
-                 last_update_time = CommonUtils.System_Current_Datetime(),
-                 is_deleted = False):
+                 creator: str,
+                 last_updater: str,
+                 mission_indexs: list = [0, 0],
+                 create_time: str = CommonUtils.System_Current_Datetime(),
+                 last_update_time: str = CommonUtils.System_Current_Datetime(),
+                 is_deleted: bool = False):
         BaseEntity.__init__(self, creator, create_time, last_updater, last_update_time, is_deleted)
         self.__id = id                                          # 实体id
         self.__mission_name = mission_name                      # 任务名称
@@ -55,7 +55,7 @@ class ProductMission(BaseEntity):
         self.__mission_pn_code = mission_pn_code
     def SetMissionStatus(self, mission_status: int):
         self.__mission_status = mission_status
-    def SetMissionIndexs(self, mission_indexs: tuple):
+    def SetMissionIndexs(self, mission_indexs: list):
         self.__mission_indexs = mission_indexs
     def SetMissionProductSides(self, mission_product_sides: list):
         CommonUtils.CheckArgumentType(mission_product_sides, list)
@@ -71,7 +71,7 @@ class ProductMission(BaseEntity):
         return self.__mission_pn_code
     def GetMissionStatus(self) -> int:
         return self.__mission_status
-    def GetMissionIndexs(self) -> tuple:
+    def GetMissionIndexs(self) -> list:
         return self.__mission_indexs
     def GetMissionProductSides(self) -> list:
         return self.__mission_product_sides
@@ -80,15 +80,15 @@ class ProductMission(BaseEntity):
 # 产品面图片实体，子类之一
 class ProductImage(BaseEntity):
     def __init__(self,
-                 id,
+                 id: int,
                  image_original: Image.Image,
                  image_zooming_ratio: float,
                  image_relative_position: tuple,
-                 creator,
-                 last_updater,
-                 create_time = CommonUtils.System_Current_Datetime(),
-                 last_update_time = CommonUtils.System_Current_Datetime(),
-                 is_deleted = False):
+                 creator: str,
+                 last_updater: str,
+                 create_time: str = CommonUtils.System_Current_Datetime(),
+                 last_update_time: str = CommonUtils.System_Current_Datetime(),
+                 is_deleted: bool = False):
         BaseEntity.__init__(self, creator, create_time, last_updater, last_update_time, is_deleted)
         self.__id = id                                              # 实体id
 
@@ -120,15 +120,15 @@ class ProductImage(BaseEntity):
 # 产品面实体，子类之一
 class ProductSides(BaseEntity):
     def __init__(self,
-                 id,
+                 id: int,
                  side_name: str,
                  side_image: ProductImage,
                  bolts: list,
-                 creator,
-                 last_updater,
-                 create_time = CommonUtils.System_Current_Datetime(),
-                 last_update_time = CommonUtils.System_Current_Datetime(),
-                 is_deleted = False):
+                 creator: str,
+                 last_updater: str,
+                 create_time: str = CommonUtils.System_Current_Datetime(),
+                 last_update_time: str = CommonUtils.System_Current_Datetime(),
+                 is_deleted: bool = False):
         BaseEntity.__init__(self, creator, create_time, last_updater, last_update_time, is_deleted)
         self.__id = id                  # 实体id
         self.__side_name = side_name    # 产品面名称
@@ -164,15 +164,15 @@ class ProductSides(BaseEntity):
 # 螺栓点位实体，是子类之一，并且是子类[产品面]的子类
 class ProductBolts(BaseEntity):
     def __init__(self,
-                 id,
-                 bolt_name,
-                 bolt_position,
-                 bolt_status,
-                 creator,
-                 last_updater,
-                 create_time = CommonUtils.System_Current_Datetime(),
-                 last_update_time = CommonUtils.System_Current_Datetime(),
-                 is_deleted = False):
+                 id: int,
+                 bolt_name: str,
+                 bolt_position: tuple,
+                 bolt_status: int,
+                 creator: str,
+                 last_updater: str,
+                 create_time: str = CommonUtils.System_Current_Datetime(),
+                 last_update_time: str = CommonUtils.System_Current_Datetime(),
+                 is_deleted: bool = False):
         BaseEntity.__init__(self, creator, create_time, last_updater, last_update_time, is_deleted)
         self.__id = id                          # 实体id
         self.__bolt_name = bolt_name            # 螺栓点位名称
@@ -190,11 +190,20 @@ class ProductBolts(BaseEntity):
 
     def GetID(self) -> int:
         return self.__id
-    def GetSBoltName(self) -> str:
+    def GetSBoltName(self) -> tuple:
         return self.__bolt_position
     def GetBoltPosition(self) -> tuple:
         return self.__bolt_position
-    def GetBoltStatus(self) -> str:
+    def GetBoltStatus(self) -> int:
         return self.__bolt_status
 
 
+# 实时数据实体
+class RealtimeData:
+    def __init__(self,
+                 mission_id: int,
+                 mission_indexs: tuple):
+        self.mission_id = mission_id
+        self.mission_indexs = mission_indexs
+        self.torque = 0.0
+        self.angle = 0

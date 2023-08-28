@@ -427,10 +427,8 @@ class CustomRadiusButton(buttons.GenBitmapButton):
         dc.Clear()
 
         # 设置画笔、画刷的颜色
-        pen = wx.Pen(background_color, 1)
-        dc.SetPen(pen)
-        brush = wx.Brush(background_color)
-        dc.SetBrush(brush)
+        dc.SetPen(wx.Pen(background_color, 1))
+        dc.SetBrush(wx.Brush(background_color))
 
         # 画出bitmap的形状
         dc.DrawRoundedRectangle(0, 0, width, height, radius)

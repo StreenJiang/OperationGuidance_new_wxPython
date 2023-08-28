@@ -9,31 +9,42 @@ from src.main.utils import CommonUtils, CacheUtil
 from src.main.enums.Cache import CacheEnum as cache
 
 # 返回按钮的TEXT
-BACK_BUTTON_TEXT = "返回"
+BACK_BUTTON_TEXT        = "返回"
 # 条码框的扫码icon图片存储路径
-PATH_BAR_CODE_ICON = "configs/icons/bar_code_icon.png"
+PATH_ICON_BAR_CODE      = "configs/icons/bar_code_icon.png"
 
-# 全局变量
-
-# 全局方法
-# 向obj的thread_arr中添加线程
-def register_thread(obj, thread, *args, **kws):
-    thread_dict = {
-        "class": thread,
-        "args": args,
-        "kws": kws,
-        "obj": None
-    }
-    obj.threads_arr.append(thread_dict)
+# 产品界面的翻页按钮
+PATH_ICON_BACKWARD_FAST = [
+    "configs/icons/page_btn_backward-fast.png",
+    "configs/icons/page_btn_backward-fast_hover.png",
+    "configs/icons/page_btn_backward-fast_toggled.png"
+]
+PATH_ICON_BACKWARD      = [
+    "configs/icons/page_btn_backward.png",
+    "configs/icons/page_btn_backward_hover.png",
+    "configs/icons/page_btn_backward_toggled.png"
+]
+PATH_ICON_FORWARD       = [
+    "configs/icons/page_btn_forward.png",
+    "configs/icons/page_btn_forward_hover.png",
+    "configs/icons/page_btn_forward_toggled.png"
+]
+PATH_ICON_FORWARD_FAST  = [
+    "configs/icons/page_btn_forward-fast.png",
+    "configs/icons/page_btn_forward-fast_hover.png",
+    "configs/icons/page_btn_forward-fast_toggled.png"
+]
 
 
 class WorkplaceView(wx.Panel):
     def __init__(self, parent = None, id = wx.ID_ANY,
                  pos = wx.DefaultPosition, size = wx.DefaultSize, style = 0,
-                 name = "WorkplaceView", title = "WorkplaceView", mission_obj = None):
+                 name = "WorkplaceView", title = "WorkplaceView",
+                 mission_obj: pdctmsn.ProductMission = None):
         wx.Panel.__init__(self, parent, id, pos, size, style, name)
+        self.Hide()
         self.top_parent = CommonUtils.GetTopParent(self)
-        self.title = title
+        self.title = mission_obj.GetMissionName()
         self.mission_obj = mission_obj
 
         # 主要的两个panel，一个顶部菜单条panel、一个下面的内容主体panel
@@ -58,8 +69,14 @@ class WorkplaceView(wx.Panel):
         # 线程集合，用来存整个界面需要运行的线程
         self.threads_arr = []
 
+        # 左侧panel需要的参数
         self.devices = None
         self.devices_changed = False
+
+        # 右侧中间panel需要的参数
+        self.realtime_data_obj = pdctmsn.RealtimeData(
+            mission_obj.GetID(), mission_obj.GetMissionIndexs()
+        )
 
         self.bar_code_text_control = None
         self.product_image = None
@@ -93,11 +110,7 @@ class WorkplaceView(wx.Panel):
 
         # 刷新布局
         self.Layout()
-
-        # 主动触发一次show事件，因为新创建出来的第一次好像不触发（没深入研究原理，暂时先这样）
-        event_temp = wx.ShowEvent(id, True)
-        event_temp.SetEventObject(self)
-        self.GetEventHandler().ProcessEvent(event_temp)
+        self.Show()
 
     def set_up_top_menu_bar_panel(self):
         # 添加返回按钮
@@ -122,16 +135,16 @@ class WorkplaceView(wx.Panel):
         self.bar_code_panel = self.content_panel.add_middle_top()
 
         # 添加产品图片panel
-        mission_image = self.mission_obj.GetMissionProductSides()[0].GetSideImage().GetImageOriginal()
-        mission_image = CommonUtils.PILImageToWxImage(mission_image).ConvertToBitmap()
-        self.product_image_panel = self.content_panel.add_middle_bottom(mission_image)
+        self.product_image_panel = self.content_panel.add_middle_bottom(self.mission_obj)
 
         # 添加工作状态动态显示panel
         self.progress_status_panel = self.content_panel.add_right_top(self.mission_obj)
 
-        self.progress_result_data_panel = self.content_panel.add_right_center()
+        # 添加实时数据显示panel
+        self.progress_result_data_panel = self.content_panel.add_right_center(self.realtime_data_obj)
 
-        self.product_sides_panel = self.content_panel.add_right_bottom()
+        # 添加产品面显示panel
+        self.product_sides_panel = self.content_panel.add_right_bottom(self.mission_obj)
 
     # 获取缓存数据 - 设备列表
     def get_devices(self):
@@ -211,6 +224,20 @@ class WorkplaceView(wx.Panel):
                     t.stop()
 
         event.Skip()
+
+    # 向thread_arr中添加线程
+    def register_thread(self, thread, *args, **kws):
+        thread_dict = {
+            "class": thread,
+            "args": args,
+            "kws": kws,
+            "obj": None
+        }
+        self.threads_arr.append(thread_dict)
+
+    # 设置实时数据对象（realtime_data）
+    def set_realtime_data_obj(self, realtime_data_obj):
+        self.realtime_data_obj = realtime_data_obj
 
     # 窗体拖拽事件 - 重新定位窗体位置
     def window_dragging(self, event):
@@ -434,25 +461,24 @@ class ContentPanel(widgets.CustomBorderPanel):
 
     def add_middle_top(self):
         self.panel_middle_top = MiddleTopPanel(parent = self)
-        self.panel_middle_top.set_icon(wx.Image(PATH_BAR_CODE_ICON, wx.BITMAP_TYPE_ANY).ConvertToBitmap())
+        self.panel_middle_top.set_icon(wx.Image(PATH_ICON_BAR_CODE, wx.BITMAP_TYPE_ANY).ConvertToBitmap())
         self.panel_middle_top.add_text_control("点击或扫描录入条码信息")
         return self.panel_middle_top
 
-    def add_middle_bottom(self, bitmap):
-        self.panel_middle_bottom = MiddleBottomPanel(parent = self)
-        self.panel_middle_bottom.set_product_image(bitmap)
+    def add_middle_bottom(self, mission_obj: pdctmsn.ProductMission):
+        self.panel_middle_bottom = MiddleBottomPanel(parent = self, mission_obj = mission_obj)
         return self.panel_middle_bottom
 
-    def add_right_top(self, mission_obj):
+    def add_right_top(self, mission_obj: pdctmsn.ProductMission):
         self.panel_right_top = RightTopPanel(parent = self, mission_obj = mission_obj)
         return self.panel_right_top
 
-    def add_right_center(self):
-        self.panel_right_center = RightCenterPanel(parent = self)
+    def add_right_center(self, realtime_data_obj: pdctmsn.RealtimeData):
+        self.panel_right_center = RightCenterPanel(parent = self, realtime_data_obj = realtime_data_obj)
         return self.panel_right_center
 
-    def add_right_bottom(self):
-        self.panel_right_bottom = RightBottomPanel(parent = self)
+    def add_right_bottom(self, mission_obj: pdctmsn.ProductMission):
+        self.panel_right_bottom = RightBottomPanel(parent = self, mission_obj = mission_obj)
         return self.panel_right_bottom
 
     def calc_self(self):
@@ -609,8 +635,8 @@ class LeftPanel(widgets.CustomBorderPanel):
             self.background_color = self.GetParent().GetBackgroundColour()
             self.leave_color = self.background_color
             self.is_activated = False
-            self.activated_color = configs.COLOR_DEVICE_BUTTON_ACTIVATED
-            self.clicked_color = configs.COLOR_DEVICE_BUTTON_CLICKED
+            self.activated_color = configs.COLOR_DEVICE_BUTTON_TOGGLED
+            self.clicked_color = configs.COLOR_DEVICE_BUTTON_DOWN
 
             self.Bind(wx.EVT_SIZE, self.on_size)
             self.Bind(wx.EVT_PAINT, self.on_paint)
@@ -619,6 +645,7 @@ class LeftPanel(widgets.CustomBorderPanel):
             self.Bind(wx.EVT_LEAVE_WINDOW, self.on_leave)
             self.Bind(wx.EVT_LEFT_UP, self.on_left_up)
             self.Bind(wx.EVT_LEFT_DOWN, self.on_left_down)
+            self.Bind(wx.EVT_LEFT_DCLICK, self.on_left_down)
             self.Bind(wx.EVT_SHOW, self.on_show)
 
         def on_size(self, event):
@@ -721,7 +748,7 @@ class LeftPanel(widgets.CustomBorderPanel):
 
         def set_detail_panel(self):
             if self.detail_panel is None:
-                self.detail_panel = self.DeviceBlockDetail(self, configs.COLOR_DEVICE_BUTTON_ACTIVATED,
+                self.detail_panel = self.DeviceBlockDetail(self, configs.COLOR_DEVICE_BUTTON_TOGGLED,
                                                            self.border_color)
             found = False
             for device in self.devices:
@@ -1004,13 +1031,19 @@ class MiddleTopPanel(widgets.CustomBorderPanel):
 
 # 中间下方的产品展示、工作流程panel
 class MiddleBottomPanel(widgets.CustomBorderPanel):
-    def __init__(self, parent, id = -1, border_thickness = 1,
+    def __init__(self, parent, id = -1, border_thickness = 1, mission_obj: pdctmsn.ProductMission = None,
                  border_color = configs.COLOR_CONTENT_PANEL_INSIDE_BORDER, margin = 0, radius = 0):
         widgets.CustomBorderPanel.__init__(self, parent, id, border_thickness = border_thickness,
                                            border_color = border_color, margin = margin, radius = radius)
+        self.mission_obj = mission_obj
         self.product_bitmap = None
         self.bolts = []
         self.Bind(wx.EVT_PAINT, self.on_paint)
+
+    def get_image(self):
+        indexs = self.mission_obj.GetMissionIndexs()
+        mission_image = self.mission_obj.GetMissionProductSides()[indexs[0]].GetSideImage().GetImageOriginal()
+        self.product_bitmap = CommonUtils.PILImageToWxImage(mission_image).ConvertToBitmap()
 
     def on_size(self, event):
         # 计算自身size和pos（在父panel计算过了)
@@ -1018,6 +1051,8 @@ class MiddleBottomPanel(widgets.CustomBorderPanel):
 
     def on_paint(self, event):
         dc = wx.GCDC(wx.PaintDC(self))
+        # 获取最新的数据
+        self.get_image()
 
         # 重设产品图片的size和pos
         if self.product_bitmap is not None:
@@ -1049,36 +1084,247 @@ class MiddleBottomPanel(widgets.CustomBorderPanel):
 
 # 右侧上方的工作状态panel
 class RightTopPanel(widgets.CustomBorderPanel):
-    def __init__(self, parent, id = -1, border_thickness = 1, mission_obj = None,
+    def __init__(self, parent, id = -1, border_thickness = 1, mission_obj: pdctmsn.ProductMission = None,
                  border_color = configs.COLOR_CONTENT_PANEL_INSIDE_BORDER, margin = 0, radius = 0):
         widgets.CustomBorderPanel.__init__(self, parent, id, border_thickness = border_thickness,
                                            border_color = border_color, margin = margin, radius = radius)
         self.mission_obj = mission_obj
-        self.icon_clockwise = None
-        self.icon_anticlockwise = None
-        self.status = pdctmsn.STATUS_SCREW_GUN_DEFAULT
-        self.status_text = None
-        self.status_detail_text = None
-
-        register_thread(self.GetParent().GetParent(), wThread.WorkplaceMainThread, self, mission_obj)
-
+        self.GetParent().GetParent().register_thread(
+            wThread.WorkplaceWorkingStatusThread, self, mission_obj
+        )
 
 
 # 右侧中间的数据结果展示panel
 class RightCenterPanel(widgets.CustomBorderPanel):
-    def __init__(self, parent, id = -1, border_thickness = 1,
+    def __init__(self, parent, id = -1, border_thickness = 1, realtime_data_obj: pdctmsn.RealtimeData = None,
                  border_color = configs.COLOR_CONTENT_PANEL_INSIDE_BORDER, margin = 0, radius = 0):
         widgets.CustomBorderPanel.__init__(self, parent, id, border_thickness = border_thickness,
                                            border_color = border_color, margin = margin, radius = radius)
-        self.product_image = None
-        self.bolts = []
+        self.realtime_data_obj = realtime_data_obj
+        self.GetParent().GetParent().register_thread(
+            wThread.WorkplaceWorkingDataThread, self, realtime_data_obj
+        )
 
 
 # 右侧下方的产品面panel
 class RightBottomPanel(widgets.CustomBorderPanel):
-    def __init__(self, parent, id = -1, border_thickness = 1,
+    def __init__(self, parent, id = -1, border_thickness = 1, mission_obj: pdctmsn.ProductMission = None,
                  border_color = configs.COLOR_CONTENT_PANEL_INSIDE_BORDER, margin = 0, radius = 0):
         widgets.CustomBorderPanel.__init__(self, parent, id, border_thickness = border_thickness,
                                            border_color = border_color, margin = margin, radius = radius)
-        self.product_image = None
-        self.bolts = []
+        self.mission_obj = mission_obj
+        self.indexs: list = []
+        self.mission_side = None
+        self.mission_side_count = None
+        self.mission_side_name = None
+        self.image = None
+        self.bitmap = None
+        self.current_page_num = None
+        # 初始化参数
+        self.get_variables()
+        self.get_image()
+
+        self.backward_fast = self.BitmapButton(self, bitmaps_path = PATH_ICON_BACKWARD_FAST, name = "第一个")
+        self.backward = self.BitmapButton(self, bitmaps_path = PATH_ICON_BACKWARD, name = "上一个")
+        self.forward = self.BitmapButton(self, bitmaps_path = PATH_ICON_FORWARD, name = "下一个")
+        self.forward_fast = self.BitmapButton(self, bitmaps_path = PATH_ICON_FORWARD_FAST, name = "最后一个")
+
+        self.backward_fast.Bind(wx.EVT_LEFT_DOWN, self.backward_fast_on_left_down)
+        self.backward.Bind(wx.EVT_LEFT_DOWN, self.backward_on_left_down)
+        self.forward.Bind(wx.EVT_LEFT_DOWN, self.forward_on_left_down)
+        self.forward_fast.Bind(wx.EVT_LEFT_DOWN, self.forward_fast_on_left_down)
+        self.Bind(wx.EVT_PAINT, self.on_paint)
+
+    def get_variables(self):
+        self.indexs = self.mission_obj.GetMissionIndexs()
+        self.mission_side = self.mission_obj.GetMissionProductSides()[self.indexs[0]]
+        self.mission_side_count = len(self.mission_obj.GetMissionProductSides())
+        self.mission_side_name = self.mission_side.GetSideName()
+        self.current_page_num = self.indexs[0] + 1
+
+    def get_image(self):
+        self.image = CommonUtils.PILImageToWxImage(self.mission_side.GetSideImage().GetImageOriginal())
+
+    def backward_fast_on_left_down(self, event):
+        indexs_new = self.indexs.copy()
+        indexs_new[0] = 0
+        self.mission_obj.SetMissionIndexs(indexs_new)
+        self.refresh_all(indexs_new[0] != self.indexs[0])
+        event.Skip()
+
+    def backward_on_left_down(self, event):
+        indexs_new = self.indexs.copy()
+        indexs_new[0] -= 1
+        if indexs_new[0] < 0:
+            indexs_new[0] = 0
+        self.mission_obj.SetMissionIndexs(indexs_new)
+        self.refresh_all(indexs_new[0] != self.indexs[0])
+        event.Skip()
+
+    def forward_on_left_down(self, event):
+        indexs_new = self.indexs.copy()
+        indexs_new[0] += 1
+        if indexs_new[0] + 1 > self.mission_side_count:
+            indexs_new[0] = self.mission_side_count - 1
+        self.mission_obj.SetMissionIndexs(indexs_new)
+        self.refresh_all(indexs_new[0] != self.indexs[0])
+        event.Skip()
+
+    def forward_fast_on_left_down(self, event):
+        indexs_new = self.indexs.copy()
+        indexs_new[0] = self.mission_side_count - 1
+        self.mission_obj.SetMissionIndexs(indexs_new)
+        self.refresh_all(indexs_new[0] != self.indexs[0])
+        event.Skip()
+
+    def refresh_all(self, refresh: bool = False):
+        self.get_variables()
+        self.get_image()
+        if refresh:
+            self.GetParent().Refresh()
+
+    def on_size(self, event):
+        w, h = self.GetSize()
+        # 重新获取最新的参数
+        self.get_image()
+
+        # 重设logo的size
+        image = self.image.Copy()
+        # 计算logo的size
+        # TODO: 后续需要根据图片选定的坐标和窗口的比例进行精准的绘制图片
+        top_w, top_h = self.GetTopLevelParent().GetSize()
+        i_w = w * 0.8
+        i_h = i_w / (top_w / top_h)  # 设置跟主窗体一样的长宽比例
+        # 重新设置图片的尺寸
+        image.Rescale(i_w, i_h, wx.IMAGE_QUALITY_BILINEAR)
+        # 重新绘制bitmap
+        self.bitmap = image.ConvertToBitmap()
+
+        super().on_size(event)
+
+    def on_paint(self, event):
+        dc = wx.GCDC(wx.PaintDC(self))
+        w, h = self.GetSize()
+        # 重新获取最新的参数
+        self.get_variables()
+
+        # 水平、垂直缩进
+        w_h_difference = math.ceil((h - w) / 50)
+        vertical_indent = math.ceil(h / 40) + w_h_difference
+
+        # 获取字体
+        font_temp = self.GetFont()
+        font_temp.SetWeight(wx.FONTWEIGHT_BOLD)
+        font_temp.SetPointSize(int(w / 30 + h / 25) + 1)
+        dc.SetFont(font_temp)
+        tw, th = dc.GetTextExtent(self.mission_side_name)
+        title_h = th + vertical_indent * 2
+        # 小标题size、pos、背景颜色
+        dc.SetPen(wx.Pen(configs.COLOR_WORKPLACE_BLOCK_TITLE_BACKGROUND))
+        dc.SetBrush(wx.Brush(configs.COLOR_WORKPLACE_BLOCK_TITLE_BACKGROUND))
+        dc.DrawRoundedRectangle(0, 0, w, title_h, 0)
+        # 绘制完背景再绘制文字
+        dc.DrawText(self.mission_side_name, math.ceil((w - tw) / 2), vertical_indent)
+
+        # 计算logo的pos
+        i_w, i_h = self.bitmap.GetSize()
+        # 计算图片、按钮的间隙
+        content_v_gap = math.ceil((h - i_h) / 10)
+        i_pos = (math.ceil((w - i_w) / 2), math.ceil(title_h + content_v_gap))
+        dc.SetPen(wx.Pen(configs.COLOR_CONTENT_BLOCK_BORDER_2, 1))
+        border_pos = (i_pos[0] - 1, i_pos[1] - 1)
+        border_size = (i_w + 2, i_h + 2)
+        dc.DrawRoundedRectangle(border_pos, border_size, 0)
+        dc.DrawBitmap(self.bitmap, i_pos, self.bitmap.GetMask() is not None)
+
+        # 重新计算页码显示文字的字体大小
+        font_temp.SetWeight(wx.FONTWEIGHT_NORMAL)
+        font_temp.SetWeight(wx.FONTWEIGHT_BOLD)
+        font_temp.SetPointSize(int(w / 50 + h / 30) + 1)
+        dc.SetTextForeground(configs.COLOR_TEXT_THEME)
+        dc.SetFont(font_temp)
+        page_text = str(self.current_page_num) + "/" + str(self.mission_side_count)
+        tw, th = dc.GetTextExtent(page_text)
+        # 按钮盒页码文字的y轴数值
+        b_y = title_h + i_h + content_v_gap * 2
+        dc.DrawText(page_text, math.ceil((w - tw) / 2), b_y - th / 10)
+        # 重新计算按钮的size
+        b_w, b_h = self.backward_fast.GetSize()
+        b_h_new = h - title_h - i_h - content_v_gap * 3
+        b_w, b_h = CommonUtils.CalculateNewSizeWithSameRatio((b_w, b_h), b_h_new / b_h)
+        # 按钮之间的gap
+        w_gap = math.ceil((w / 2 - 2 * b_w - tw / 2) / 3)
+
+        # 重设"第一个"按钮的size和pos
+        self.backward_fast.SetSize(b_w, b_h)
+        self.backward_fast.SetPosition((w_gap, b_y))
+        # 重设"上一个"按钮的size和pos
+        self.backward.SetSize(b_w, b_h)
+        self.backward.SetPosition((w_gap * 2 + b_w, b_y))
+        # 重设"下一个"按钮的size和pos
+        self.forward.SetSize(b_w, b_h)
+        self.forward.SetPosition((w_gap * 4 + b_w * 2 + tw, b_y))
+        # 重设"最后一个"按钮的size和pos
+        self.forward_fast.SetSize(b_w, b_h)
+        self.forward_fast.SetPosition((w_gap * 5 + b_w * 3 + tw, b_y))
+
+        # 删除DC
+        del dc
+
+
+    # 自定义bitmap按钮
+    class BitmapButton(wx.Control):
+        def __init__(self, parent, id = wx.ID_ANY, pos = wx.DefaultPosition, size = wx.DefaultSize,
+                     bitmaps_path = None,
+                     style = wx.BORDER_NONE, validator = wx.DefaultValidator, name = "BitmapButton"):
+            wx.Control.__init__(self, parent, id, pos, size, style, validator, name)
+            self.images = []
+            for bitmap_path in bitmaps_path:
+                self.images.append(wx.Image(bitmap_path, wx.BITMAP_TYPE_ANY))
+            self.index = 0
+            self.bitmap = None
+
+            self.is_in = False
+            self.Bind(wx.EVT_PAINT, self.on_paint)
+            self.Bind(wx.EVT_ENTER_WINDOW, self.on_enter)
+            self.Bind(wx.EVT_LEAVE_WINDOW, self.on_leave)
+            self.Bind(wx.EVT_LEFT_DOWN, self.on_left_down)
+            self.Bind(wx.EVT_LEFT_DCLICK, self.on_left_down)
+            self.Bind(wx.EVT_LEFT_UP, self.on_left_up)
+
+        def on_paint(self, event):
+            dc = wx.GCDC(wx.PaintDC(self))
+            w, h = self.GetSize()
+            image = self.images[self.index].Copy()
+            image.Rescale(w, h, wx.IMAGE_QUALITY_HIGH)
+            self.bitmap = image.ConvertToBitmap()
+            dc.DrawBitmap(self.bitmap, (0, 0), self.bitmap.GetMask() is not None)
+            del dc
+            event.Skip()
+
+        def on_enter(self, event):
+            event_obj = event.GetEventObject()
+            event_obj.SetToolTip(event_obj.GetName())
+            self.index = 1
+            self.is_in = True
+            self.Refresh()
+            event.Skip()
+
+        def on_leave(self, event):
+            self.index = 0
+            self.is_in = False
+            self.Refresh()
+            event.Skip()
+
+        def on_left_down(self, event):
+            self.index = 2
+            self.Refresh()
+            event.Skip()
+
+        def on_left_up(self, event):
+            if self.is_in:
+                self.index = 1
+            else:
+                self.index = 0
+            self.Refresh()
+            event.Skip()

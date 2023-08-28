@@ -58,11 +58,11 @@ class ToolBaseEntity(ABC):
 # 所有数据实体的父类
 class BaseEntity:
     def __init__(self,
-                 creator = None,
-                 create_time = CommonUtils.System_Current_Datetime(),
-                 last_updater = None,
-                 last_update_time = CommonUtils.System_Current_Datetime(),
-                 is_deleted = False):
+                 creator: str = None,
+                 create_time: str = CommonUtils.System_Current_Datetime(),
+                 last_updater: str = None,
+                 last_update_time: str = CommonUtils.System_Current_Datetime(),
+                 is_deleted: bool = False):
         self.__creator = creator                    # 创建人
         self.__create_time = create_time            # 创建时间
         self.__last_updater = last_updater          # 最后修改人

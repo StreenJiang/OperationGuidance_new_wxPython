@@ -15,7 +15,7 @@ def get_all_missions(obj) -> list:
             mission_status = pdctmsn.STATUS_MISSION_WORKING,
             creator = "创建人",
             last_updater = "创建人",
-            mission_indexs = (0, 0),
+            mission_indexs = [0, 0],
             mission_product_sides = [
                 pdctmsn.ProductSides(
                     id = 1,
@@ -33,7 +33,7 @@ def get_all_missions(obj) -> list:
                 pdctmsn.ProductSides(
                     id = 2,
                     side_name = "产品正面",
-                    side_image = pdctmsn.ProductImage(1, Image.open("产品图片样图 (1).jpg"), 1, (0, 0), "me", "me"),
+                    side_image = pdctmsn.ProductImage(1, Image.open("产品图片样图 (2).jpg"), 1, (0, 0), "me", "me"),
                     creator = "创建人",
                     last_updater = "创建人",
                     bolts = [
@@ -52,7 +52,7 @@ def get_all_missions(obj) -> list:
             mission_status = pdctmsn.STATUS_MISSION_WORKING,
             creator = "创建人",
             last_updater = "创建人",
-            mission_indexs = (1, 1),
+            mission_indexs = [1, 1],
             mission_product_sides = [
                 pdctmsn.ProductSides(
                     id = 1,
@@ -89,7 +89,7 @@ def get_all_missions(obj) -> list:
             mission_status = pdctmsn.STATUS_MISSION_WORKING,
             creator = "创建人",
             last_updater = "创建人",
-            mission_indexs = (0, 1),
+            mission_indexs = [0, 1],
             mission_product_sides = [
                 pdctmsn.ProductSides(
                     id = 1,
@@ -107,7 +107,7 @@ def get_all_missions(obj) -> list:
                 pdctmsn.ProductSides(
                     id = 2,
                     side_name = "产品正面",
-                    side_image = pdctmsn.ProductImage(1, Image.open("产品图片样图 (1).jpg"), 1, (0, 0), "me", "me"),
+                    side_image = pdctmsn.ProductImage(1, Image.open("产品图片样图 (2).jpg"), 1, (0, 0), "me", "me"),
                     creator = "创建人",
                     last_updater = "创建人",
                     bolts = [
@@ -126,7 +126,7 @@ def get_all_missions(obj) -> list:
             mission_status = pdctmsn.STATUS_MISSION_WORKING,
             creator = "创建人",
             last_updater = "创建人",
-            mission_indexs = (1, 0),
+            mission_indexs = [1, 0],
             mission_product_sides = [
                 pdctmsn.ProductSides(
                     id = 1,
@@ -163,12 +163,12 @@ def get_all_missions(obj) -> list:
             mission_status = pdctmsn.STATUS_MISSION_WORKING,
             creator = "创建人",
             last_updater = "创建人",
-            mission_indexs = (0, 1),
+            mission_indexs = [0, 1],
             mission_product_sides = [
                 pdctmsn.ProductSides(
                     id = 1,
                     side_name = "产品正面",
-                    side_image = pdctmsn.ProductImage(1, Image.open("产品图片样图 (1).jpg"), 1, (0, 0), "me", "me"),
+                    side_image = pdctmsn.ProductImage(1, Image.open("产品图片样图 (2).jpg"), 1, (0, 0), "me", "me"),
                     creator = "创建人",
                     last_updater = "创建人",
                     bolts = [
@@ -200,12 +200,49 @@ def get_all_missions(obj) -> list:
             mission_status = pdctmsn.STATUS_MISSION_WORKING,
             creator = "创建人",
             last_updater = "创建人",
-            mission_indexs = (1, 1),
+            mission_indexs = [1, 1],
             mission_product_sides = [
                 pdctmsn.ProductSides(
                     id = 1,
                     side_name = "产品正面",
                     side_image = pdctmsn.ProductImage(1, Image.open("产品图片样图 (1).jpg"), 1, (0, 0), "me", "me"),
+                    creator = "创建人",
+                    last_updater = "创建人",
+                    bolts = [
+                        pdctmsn.ProductBolts(1, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
+                                             creator = "创建人", last_updater = "创建人"),
+                        pdctmsn.ProductBolts(2, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
+                                             creator = "创建人", last_updater = "创建人"),
+                    ]
+                ),
+                pdctmsn.ProductSides(
+                    id = 2,
+                    side_name = "产品正面",
+                    side_image = pdctmsn.ProductImage(1, Image.open("产品图片样图 (2).jpg"), 1, (0, 0), "me", "me"),
+                    creator = "创建人",
+                    last_updater = "创建人",
+                    bolts = [
+                        pdctmsn.ProductBolts(1, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
+                                             creator = "创建人", last_updater = "创建人"),
+                        pdctmsn.ProductBolts(2, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_LOOSENING_ERROR,
+                                             creator = "创建人", last_updater = "创建人"),
+                    ]
+                )
+            ]
+        ),
+        pdctmsn.ProductMission(
+            id = 7,
+            mission_name = "任务名称5",
+            mission_pn_code = "555555",
+            mission_status = pdctmsn.STATUS_MISSION_DEFAULT,
+            creator = "创建人",
+            last_updater = "创建人",
+            mission_indexs = [0, 0],
+            mission_product_sides = [
+                pdctmsn.ProductSides(
+                    id = 1,
+                    side_name = "产品正面",
+                    side_image = pdctmsn.ProductImage(1, Image.open("产品图片样图 (2).jpg"), 1, (0, 0), "me", "me"),
                     creator = "创建人",
                     last_updater = "创建人",
                     bolts = [
@@ -230,6 +267,43 @@ def get_all_missions(obj) -> list:
                 )
             ]
         ),
+        pdctmsn.ProductMission(
+            id = 8,
+            mission_name = "任务名称5",
+            mission_pn_code = "555555",
+            mission_status = pdctmsn.STATUS_MISSION_READY,
+            creator = "创建人",
+            last_updater = "创建人",
+            mission_indexs = [0, 0],
+            mission_product_sides = [
+                pdctmsn.ProductSides(
+                    id = 1,
+                    side_name = "产品正面",
+                    side_image = pdctmsn.ProductImage(1, Image.open("产品图片样图 (1).jpg"), 1, (0, 0), "me", "me"),
+                    creator = "创建人",
+                    last_updater = "创建人",
+                    bolts = [
+                        pdctmsn.ProductBolts(1, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
+                                             creator = "创建人", last_updater = "创建人"),
+                        pdctmsn.ProductBolts(2, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
+                                             creator = "创建人", last_updater = "创建人"),
+                    ]
+                ),
+                pdctmsn.ProductSides(
+                    id = 2,
+                    side_name = "产品正面",
+                    side_image = pdctmsn.ProductImage(1, Image.open("产品图片样图 (2).jpg"), 1, (0, 0), "me", "me"),
+                    creator = "创建人",
+                    last_updater = "创建人",
+                    bolts = [
+                        pdctmsn.ProductBolts(1, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
+                                             creator = "创建人", last_updater = "创建人"),
+                        pdctmsn.ProductBolts(2, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_LOOSENING_ERROR,
+                                             creator = "创建人", last_updater = "创建人"),
+                    ]
+                )
+            ]
+        ),
     ]
 
 
@@ -242,7 +316,7 @@ def get_by_id(mission_id) -> pdctmsn.ProductMission:
             mission_status = pdctmsn.STATUS_MISSION_WORKING,
             creator = "创建人",
             last_updater = "创建人",
-            mission_indexs = (0, 0),
+            mission_indexs = [0, 0],
             mission_product_sides = [
                 pdctmsn.ProductSides(
                     id = 1,
@@ -260,7 +334,7 @@ def get_by_id(mission_id) -> pdctmsn.ProductMission:
                 pdctmsn.ProductSides(
                     id = 2,
                     side_name = "产品正面",
-                    side_image = pdctmsn.ProductImage(1, Image.open("产品图片样图 (1).jpg"), 1, (0, 0), "me", "me"),
+                    side_image = pdctmsn.ProductImage(1, Image.open("产品图片样图 (2).jpg"), 1, (0, 0), "me", "me"),
                     creator = "创建人",
                     last_updater = "创建人",
                     bolts = [

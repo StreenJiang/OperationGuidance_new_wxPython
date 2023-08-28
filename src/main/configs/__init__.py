@@ -41,6 +41,8 @@ COLOR_BUTTON_BACKGROUND = COLOR_SYSTEM_LOGO         # 默认参数 - 颜色 - �
 COLOR_BUTTON_FOCUSED = "#F19753"                    # 默认参数 - 颜色 - 按钮捕捉到鼠标时的颜色
 COLOR_BUTTON_CLICKED = "#D05900"                    # 默认参数 - 颜色 - 按钮按下的颜色
 
-COLOR_DEVICE_BUTTON_HOVER = "#DDDDDD"               # 默认参数 - 颜色 - 设备小图标按钮鼠标移上时的颜色
-COLOR_DEVICE_BUTTON_CLICKED = "#DDDDDD"             # 默认参数 - 颜色 - 设备小图标按钮鼠标按下时的颜色
-COLOR_DEVICE_BUTTON_ACTIVATED = "#CCCCCC"           # 默认参数 - 颜色 - 设备小图标按钮被激活时的颜色
+COLOR_DEVICE_BUTTON_HOVER = "#FAFAFA"               # 默认参数 - 颜色 - 设备小图标按钮鼠标移上时的颜色
+COLOR_DEVICE_BUTTON_DOWN = "#D1D1D1"                # 默认参数 - 颜色 - 设备小图标按钮鼠标按下时的颜色
+COLOR_DEVICE_BUTTON_TOGGLED = "#D9D9D9"             # 默认参数 - 颜色 - 设备小图标按钮被激活时的颜色
+
+COLOR_WORKPLACE_BLOCK_TITLE_BACKGROUND = "#DDDDDD"  # 默认参数 - 颜色 - 工作台任务操作界面小标题背景颜色

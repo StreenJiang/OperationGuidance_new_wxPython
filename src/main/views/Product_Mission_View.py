@@ -300,7 +300,12 @@ class MissionBlock(widgets.CustomBorderPanel):
         dc.SetFont(font_temp)
         tw, th = dc.GetTextExtent(self.mission_name)
 
-        dc.DrawBitmap(bitmap, (width - bw) // 2, (height - bh) // 2 - (th / 2) / 2, bitmap.GetMask() is not None)
+        i_pos = (width - bw) // 2, (height - bh) // 2 - (th / 2) / 2
+        dc.SetPen(wx.Pen(configs.COLOR_CONTENT_BLOCK_BORDER_2, 1))
+        border_pos = (i_pos[0] - 1, i_pos[1] - 1)
+        border_size = (bw + 2, bh + 2)
+        dc.DrawRoundedRectangle(border_pos, border_size, 0)
+        dc.DrawBitmap(bitmap, i_pos, bitmap.GetMask() is not None)
         dc.DrawText(self.mission_name, (width - tw) // 2, height / 10 * 8 + (height / 10 * 2 - th / 2) // 2)
 
         # 删除DC
