@@ -696,7 +696,8 @@ class LeftPanel(widgets.CustomBorderPanel):
             self.leave_color = self.background_color
             if self.is_activated:
                 self.leave_color = self.activated_color
-            self.SetBackgroundColour(self.enter_color)
+            else:
+                self.SetBackgroundColour(self.enter_color)
             self.Refresh()
             event.Skip()
 
@@ -1040,10 +1041,12 @@ class MiddleBottomPanel(widgets.CustomBorderPanel):
         self.bolts = []
         self.Bind(wx.EVT_PAINT, self.on_paint)
 
-    def get_image(self):
-        indexs = self.mission_obj.GetMissionIndexs()
-        mission_image = self.mission_obj.GetMissionProductSides()[indexs[0]].GetSideImage().GetImageOriginal()
+    def get_variables(self):
+        mission_indexs = self.mission_obj.GetMissionIndexs()
+        mission_side = self.mission_obj.GetMissionProductSides()[mission_indexs[0]]
+        mission_image = mission_side.GetSideImage().GetImageOriginal()
         self.product_bitmap = CommonUtils.PILImageToWxImage(mission_image).ConvertToBitmap()
+        self.bolts = mission_side.GetBolts()
 
     def on_size(self, event):
         # 计算自身size和pos（在父panel计算过了)
@@ -1051,19 +1054,46 @@ class MiddleBottomPanel(widgets.CustomBorderPanel):
 
     def on_paint(self, event):
         dc = wx.GCDC(wx.PaintDC(self))
+        dc.Clear()
+        w, h = self.GetSize()
         # 获取最新的数据
-        self.get_image()
+        self.get_variables()
 
         # 重设产品图片的size和pos
         if self.product_bitmap is not None:
             image = self.product_bitmap.ConvertToImage()
             # 计算logo的size和pos
-            i_size, i_pos = self.calc_product_image(image.GetSize())
+            i_size, i_pos = self.calc_product_image(w, h, image.GetSize())
             # 重新设置图片的尺寸
             image.Rescale(i_size[0], i_size[1], wx.IMAGE_QUALITY_BILINEAR)
             # 重新绘制bitmap
             bitmap = wx.Bitmap(image)
             dc.DrawBitmap(bitmap, i_pos, bitmap.GetMask() is not None)
+
+        b_size = self.calc_bolt_size(w, h)
+        # 边框厚度
+        border_thickness = math.ceil(b_size[0] / 20)
+        for index in range(len(self.bolts)):
+            bolt = self.bolts[index]
+            b_x, b_y = bolt.GetBoltPosition()
+            b_w, b_h = b_size
+
+            # 获取字体
+            bolt_num_str = str(bolt.GetID())
+            font_temp = self.GetFont()
+            font_temp.SetWeight(wx.FONTWEIGHT_BOLD)
+            font_temp.SetPointSize(int(b_w / 3) + 2)
+            dc.SetTextForeground(configs.COLOR_WORKPLACE_BOLT_NUMBER)
+            dc.SetFont(font_temp)
+            tw, th = dc.GetTextExtent(bolt_num_str)
+            # 小标题size、pos、背景颜色
+            dc.SetPen(wx.Pen(configs.COLOR_WORKPLACE_BOLT_BORDER, border_thickness))
+            dc.SetBrush(wx.Brush(configs.COLOR_WORKPLACE_BOLT_BACKGROUND_WAITING))
+            dc.DrawCircle((b_x // 2 + b_w // 2, b_y // 2 + b_h // 2), b_w // 2 - border_thickness)
+            # 绘制完背景再绘制文字
+            dc.DrawText(bolt_num_str,
+                        b_x // 2 + math.ceil((b_w - tw) / 2),
+                        b_y // 2 + math.ceil((b_h - th) / 2) - math.ceil(th / 25))
 
         # 删除DC
         del dc
@@ -1071,8 +1101,7 @@ class MiddleBottomPanel(widgets.CustomBorderPanel):
     def set_product_image(self, bitmap):
         self.product_bitmap = bitmap
 
-    def calc_product_image(self, image_size):
-        w, h = self.GetSize()
+    def calc_product_image(self, w, h, image_size):
         # 以高为基准，高一定保持与panel一致（填满），因为没有任何屏幕是高比宽长的除非屏幕竖起来
         # i_w, i_h = image_size
         # ratio = h / i_h
@@ -1080,6 +1109,15 @@ class MiddleBottomPanel(widgets.CustomBorderPanel):
         #     ratio = w / i_w
         # i_w, i_h = CommonUtils.CalculateNewSizeWithSameRatio((i_w, i_h), ratio)
         return (w, h), (0, 0)
+
+    def calc_bolt_size(self, w, h):
+        b_w = b_h = math.ceil(w / 40) + math.ceil(h / 25)
+        return b_w, b_h
+
+    def calc_bolt_panel_pos(self, b_size, bolt_pos):
+        b_w, b_h = b_size
+        bolt_x, bolt_y = bolt_pos
+        return bolt_x - b_w // 2, bolt_y - b_h // 2
 
 
 # 右侧上方的工作状态panel
@@ -1089,6 +1127,7 @@ class RightTopPanel(widgets.CustomBorderPanel):
         widgets.CustomBorderPanel.__init__(self, parent, id, border_thickness = border_thickness,
                                            border_color = border_color, margin = margin, radius = radius)
         self.mission_obj = mission_obj
+        self.Bind(wx.EVT_ERASE_BACKGROUND, lambda event: None)
         self.GetParent().GetParent().register_thread(
             wThread.WorkplaceWorkingStatusThread, self, mission_obj
         )
@@ -1101,6 +1140,7 @@ class RightCenterPanel(widgets.CustomBorderPanel):
         widgets.CustomBorderPanel.__init__(self, parent, id, border_thickness = border_thickness,
                                            border_color = border_color, margin = margin, radius = radius)
         self.realtime_data_obj = realtime_data_obj
+        self.Bind(wx.EVT_ERASE_BACKGROUND, lambda event: None)
         self.GetParent().GetParent().register_thread(
             wThread.WorkplaceWorkingDataThread, self, realtime_data_obj
         )

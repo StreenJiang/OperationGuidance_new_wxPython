@@ -26,7 +26,7 @@ def get_all_missions(obj) -> list:
                     bolts = [
                         pdctmsn.ProductBolts(1, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_TIGHTENING,
                                              creator = "创建人", last_updater = "创建人"),
-                        pdctmsn.ProductBolts(2, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
+                        pdctmsn.ProductBolts(2, "1号螺栓", (220, 450), pdctmsn.STATUS_SCREW_GUN_TIGHTENING,
                                              creator = "创建人", last_updater = "创建人"),
                     ]
                 ),
@@ -37,9 +37,9 @@ def get_all_missions(obj) -> list:
                     creator = "创建人",
                     last_updater = "创建人",
                     bolts = [
-                        pdctmsn.ProductBolts(1, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
+                        pdctmsn.ProductBolts(3, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_LOOSENING,
                                              creator = "创建人", last_updater = "创建人"),
-                        pdctmsn.ProductBolts(2, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
+                        pdctmsn.ProductBolts(4, "1号螺栓", (70, 150), pdctmsn.STATUS_SCREW_GUN_TIGHTENING,
                                              creator = "创建人", last_updater = "创建人"),
                     ]
                 )
@@ -61,9 +61,9 @@ def get_all_missions(obj) -> list:
                     creator = "创建人",
                     last_updater = "创建人",
                     bolts = [
-                        pdctmsn.ProductBolts(1, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
+                        pdctmsn.ProductBolts(1, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_LOOSENING,
                                              creator = "创建人", last_updater = "创建人"),
-                        pdctmsn.ProductBolts(2, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
+                        pdctmsn.ProductBolts(2, "1号螺栓", (20, 90), pdctmsn.STATUS_SCREW_GUN_TIGHTENING,
                                              creator = "创建人", last_updater = "创建人"),
                     ]
                 ),
@@ -74,9 +74,9 @@ def get_all_missions(obj) -> list:
                     creator = "创建人",
                     last_updater = "创建人",
                     bolts = [
-                        pdctmsn.ProductBolts(1, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
+                        pdctmsn.ProductBolts(3, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_LOOSENING,
                                              creator = "创建人", last_updater = "创建人"),
-                        pdctmsn.ProductBolts(2, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_LOOSENING,
+                        pdctmsn.ProductBolts(4, "1号螺栓", (20, 110), pdctmsn.STATUS_SCREW_GUN_LOOSENING,
                                              creator = "创建人", last_updater = "创建人"),
                     ]
                 )
@@ -100,7 +100,7 @@ def get_all_missions(obj) -> list:
                     bolts = [
                         pdctmsn.ProductBolts(1, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
                                              creator = "创建人", last_updater = "创建人"),
-                        pdctmsn.ProductBolts(2, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_TIGHTENING_COMPLETE,
+                        pdctmsn.ProductBolts(2, "1号螺栓", (20, 240), pdctmsn.STATUS_SCREW_GUN_TIGHTENING_COMPLETE,
                                              creator = "创建人", last_updater = "创建人"),
                     ]
                 ),
@@ -111,9 +111,9 @@ def get_all_missions(obj) -> list:
                     creator = "创建人",
                     last_updater = "创建人",
                     bolts = [
-                        pdctmsn.ProductBolts(1, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
+                        pdctmsn.ProductBolts(3, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
                                              creator = "创建人", last_updater = "创建人"),
-                        pdctmsn.ProductBolts(2, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
+                        pdctmsn.ProductBolts(4, "1号螺栓", (110, 50), pdctmsn.STATUS_SCREW_GUN_LOOSENING,
                                              creator = "创建人", last_updater = "创建人"),
                     ]
                 )
@@ -135,9 +135,9 @@ def get_all_missions(obj) -> list:
                     creator = "创建人",
                     last_updater = "创建人",
                     bolts = [
-                        pdctmsn.ProductBolts(1, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
+                        pdctmsn.ProductBolts(1, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_LOOSENING,
                                              creator = "创建人", last_updater = "创建人"),
-                        pdctmsn.ProductBolts(2, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
+                        pdctmsn.ProductBolts(2, "1号螺栓", (90, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
                                              creator = "创建人", last_updater = "创建人"),
                     ]
                 ),
@@ -148,9 +148,9 @@ def get_all_missions(obj) -> list:
                     creator = "创建人",
                     last_updater = "创建人",
                     bolts = [
-                        pdctmsn.ProductBolts(1, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_LOOSENING_COMPLETE,
+                        pdctmsn.ProductBolts(3, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_LOOSENING_COMPLETE,
                                              creator = "创建人", last_updater = "创建人"),
-                        pdctmsn.ProductBolts(2, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
+                        pdctmsn.ProductBolts(4, "1号螺栓", (50, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
                                              creator = "创建人", last_updater = "创建人"),
                     ]
                 )
@@ -172,7 +172,7 @@ def get_all_missions(obj) -> list:
                     creator = "创建人",
                     last_updater = "创建人",
                     bolts = [
-                        pdctmsn.ProductBolts(1, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
+                        pdctmsn.ProductBolts(1, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_TIGHTENING_ERROR,
                                              creator = "创建人", last_updater = "创建人"),
                         pdctmsn.ProductBolts(2, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_TIGHTENING_ERROR,
                                              creator = "创建人", last_updater = "创建人"),
@@ -185,9 +185,9 @@ def get_all_missions(obj) -> list:
                     creator = "创建人",
                     last_updater = "创建人",
                     bolts = [
-                        pdctmsn.ProductBolts(1, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
+                        pdctmsn.ProductBolts(3, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_TIGHTENING_ERROR,
                                              creator = "创建人", last_updater = "创建人"),
-                        pdctmsn.ProductBolts(2, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
+                        pdctmsn.ProductBolts(4, "2号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_TIGHTENING_ERROR,
                                              creator = "创建人", last_updater = "创建人"),
                     ]
                 )
@@ -209,9 +209,9 @@ def get_all_missions(obj) -> list:
                     creator = "创建人",
                     last_updater = "创建人",
                     bolts = [
-                        pdctmsn.ProductBolts(1, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
+                        pdctmsn.ProductBolts(1, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_LOOSENING_ERROR,
                                              creator = "创建人", last_updater = "创建人"),
-                        pdctmsn.ProductBolts(2, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
+                        pdctmsn.ProductBolts(2, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_LOOSENING_ERROR,
                                              creator = "创建人", last_updater = "创建人"),
                     ]
                 ),
@@ -222,9 +222,9 @@ def get_all_missions(obj) -> list:
                     creator = "创建人",
                     last_updater = "创建人",
                     bolts = [
-                        pdctmsn.ProductBolts(1, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
+                        pdctmsn.ProductBolts(3, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_LOOSENING_ERROR,
                                              creator = "创建人", last_updater = "创建人"),
-                        pdctmsn.ProductBolts(2, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_LOOSENING_ERROR,
+                        pdctmsn.ProductBolts(4, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_LOOSENING_ERROR,
                                              creator = "创建人", last_updater = "创建人"),
                     ]
                 )
@@ -246,9 +246,9 @@ def get_all_missions(obj) -> list:
                     creator = "创建人",
                     last_updater = "创建人",
                     bolts = [
-                        pdctmsn.ProductBolts(1, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
+                        pdctmsn.ProductBolts(1, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_LOOSENING_ERROR,
                                              creator = "创建人", last_updater = "创建人"),
-                        pdctmsn.ProductBolts(2, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
+                        pdctmsn.ProductBolts(2, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_LOOSENING_ERROR,
                                              creator = "创建人", last_updater = "创建人"),
                     ]
                 ),
@@ -259,9 +259,9 @@ def get_all_missions(obj) -> list:
                     creator = "创建人",
                     last_updater = "创建人",
                     bolts = [
-                        pdctmsn.ProductBolts(1, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
+                        pdctmsn.ProductBolts(3, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_LOOSENING_ERROR,
                                              creator = "创建人", last_updater = "创建人"),
-                        pdctmsn.ProductBolts(2, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_LOOSENING_ERROR,
+                        pdctmsn.ProductBolts(4, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_LOOSENING_ERROR,
                                              creator = "创建人", last_updater = "创建人"),
                     ]
                 )
@@ -283,9 +283,9 @@ def get_all_missions(obj) -> list:
                     creator = "创建人",
                     last_updater = "创建人",
                     bolts = [
-                        pdctmsn.ProductBolts(1, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
+                        pdctmsn.ProductBolts(1, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_LOOSENING_ERROR,
                                              creator = "创建人", last_updater = "创建人"),
-                        pdctmsn.ProductBolts(2, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
+                        pdctmsn.ProductBolts(2, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_LOOSENING_ERROR,
                                              creator = "创建人", last_updater = "创建人"),
                     ]
                 ),
@@ -296,9 +296,9 @@ def get_all_missions(obj) -> list:
                     creator = "创建人",
                     last_updater = "创建人",
                     bolts = [
-                        pdctmsn.ProductBolts(1, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
+                        pdctmsn.ProductBolts(3, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_LOOSENING_ERROR,
                                              creator = "创建人", last_updater = "创建人"),
-                        pdctmsn.ProductBolts(2, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_LOOSENING_ERROR,
+                        pdctmsn.ProductBolts(4, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_LOOSENING_ERROR,
                                              creator = "创建人", last_updater = "创建人"),
                     ]
                 )
@@ -338,7 +338,7 @@ def get_by_id(mission_id) -> pdctmsn.ProductMission:
                     creator = "创建人",
                     last_updater = "创建人",
                     bolts = [
-                        pdctmsn.ProductBolts(1, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
+                        pdctmsn.ProductBolts(1, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_TIGHTENING,
                                              creator = "创建人", last_updater = "创建人"),
                         pdctmsn.ProductBolts(2, "1号螺栓", (20, 50), pdctmsn.STATUS_SCREW_GUN_DEFAULT,
                                              creator = "创建人", last_updater = "创建人"),

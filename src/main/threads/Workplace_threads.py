@@ -100,7 +100,7 @@ class WorkplaceWorkingStatusThread(threading.Thread):
             # 反松错误
             self.handle_loosening_error(indexs)
         elif working_status == pdctmsn.STATUS_SCREW_GUN_DEFAULT:
-            # 反松错误
+            # 默认状态
             print("STATUS_SCREW_GUN_DEFAULT: waiting for any progress...")
         else:
             # 未知状态终止线程
@@ -109,7 +109,7 @@ class WorkplaceWorkingStatusThread(threading.Thread):
         return continue_flag
 
     def handle_tightening(self, working_status, indexs):
-        if working_status not in self.child_threads.keys():
+        if working_status not in self.child_threads.keys() or len(self.child_threads.keys()) > 1:
             self.clear_thread()
             child_thread = self.IconRotate(working_status, self.window,
                                            self.tightening_icon, True, indexs[1])
@@ -117,13 +117,15 @@ class WorkplaceWorkingStatusThread(threading.Thread):
             self.child_threads[working_status] = child_thread
 
     def handle_tightening_complete(self, indexs):
+        self.clear_thread()
         self.handle_complete(True, indexs)
 
     def handle_tightening_error(self, indexs):
+        self.clear_thread()
         self.handle_error(True, indexs)
 
     def handle_loosening(self, working_status, indexs):
-        if working_status not in self.child_threads.keys():
+        if working_status not in self.child_threads.keys() or len(self.child_threads.keys()) > 1:
             self.clear_thread()
             child_thread = self.IconRotate(working_status, self.window,
                                            self.loosening_icon, False, indexs[1])
@@ -131,15 +133,18 @@ class WorkplaceWorkingStatusThread(threading.Thread):
             self.child_threads[working_status] = child_thread
 
     def handle_loosening_complete(self, indexs):
+        self.clear_thread()
         self.handle_complete(False, indexs)
 
     def handle_loosening_error(self, indexs):
+        self.clear_thread()
         self.handle_error(False, indexs)
 
     def clear_thread(self):
         if len(self.child_threads) > 0:
             for dict_key in self.child_threads.keys():
                 self.child_threads[dict_key].stop()
+            self.child_threads.clear()
 
     def handle_complete(self, operation_flag, indexs):
         if self.size_cache is None or self.size_cache != self.window.GetSize():
@@ -190,7 +195,7 @@ class WorkplaceWorkingStatusThread(threading.Thread):
         else:
             message = f"[{indexs[1] + 1}]号螺丝反松错误"
 
-        # 背景设为绿色
+        # 背景设为红色
         dc.SetBackground(wx.Brush(configs.COLOR_COMMON_RED))
         dc.Clear()
 
@@ -224,7 +229,8 @@ class WorkplaceWorkingStatusThread(threading.Thread):
 
 
     class IconRotate(threading.Thread):
-        def __init__(self, thread_type, window, icon_image, clockwise, bolt_num):
+        def __init__(self, thread_type, window: widgets.CustomBorderPanel,
+                     icon_image, clockwise, bolt_num):
             threading.Thread.__init__(self)
             self.event = threading.Event()
             self.thread_type = thread_type
@@ -243,19 +249,17 @@ class WorkplaceWorkingStatusThread(threading.Thread):
             self.angle_span = 15 * math.pi / 180
 
         def run(self) -> None:
-            print("thread<IconRotate: type = thread_type> rotating")
+            print(f"thread<IconRotate: type = {self.thread_type}> rotating")
             self.running = True
-            try:
-                while self.running:
+            while self.running:
+                try:
                     image = self.icon_image.Copy()
 
                     # 如果界面有大小变化，则内容需要自适应调整
                     if self.size_cache is None or self.size_cache != self.window.GetSize():
                         self.size_cache = self.window.GetSize()
                     w, h = self.size_cache
-
-                    if self.dc is None:
-                        self.dc = wx.WindowDC(self.window)
+                    self.dc = wx.BufferedDC(wx.WindowDC(self.window))
 
                     i_w, i_h = image.GetSize()
                     i_w, i_h = CommonUtils.CalculateNewSizeWithSameRatio((i_w, i_h), w * 0.7 / i_w)
@@ -269,7 +273,6 @@ class WorkplaceWorkingStatusThread(threading.Thread):
                     i_w, i_h = image.GetSize()
                     bitmap = image.ConvertToBitmap()
                     b_pos = (math.ceil((w - i_w) / 2), math.ceil((h * 0.9 - i_h) / 2))
-                    self.dc.Clear()
                     # 绘制边框
                     self.dc.SetPen(wx.Pen(configs.COLOR_COMMON_GREEN, int(w / 40 + h / 80)))
                     self.dc.DrawRoundedRectangle(0, 0, w, h, 0)
@@ -288,16 +291,17 @@ class WorkplaceWorkingStatusThread(threading.Thread):
 
                     self.angle += self.angle_span
                     self.event.wait(0.03)
-            finally:
-                if self.dc is not None:
-                    del self.dc
+                finally:
+                    if self.dc is not None:
+                        self.dc = None
+
 
         def reset_angle(self):
             self.angle = 0
 
         def stop(self):
             self.running = False
-            print("thread<IconRotate: type = thread_type> stopped")
+            print(f"thread<IconRotate: type = {self.thread_type}> stopped")
 
 
 # 工作台操作界面右侧中间数据实时展示的线程
@@ -317,8 +321,8 @@ class WorkplaceWorkingDataThread(threading.Thread):
     def run(self) -> None:
         print("thread<WorkplaceWorkingDataThread> running")
         self.running = True
-        try:
-            while self.running:
+        while self.running:
+            try:
                 # 获取实时数据
                 torque = str(round(self.data_obj.torque, 2))
                 angle = str(self.data_obj.angle)
@@ -327,7 +331,8 @@ class WorkplaceWorkingDataThread(threading.Thread):
                     self.size_cache = self.window.GetSize()
                 w, h = self.size_cache
 
-                self.dc = wx.WindowDC(self.window)
+                self.dc = wx.BufferedDC(wx.WindowDC(self.window))
+                self.dc.Clear()
                 torque_title = "扭矩（N*m)"
                 angle_title = "角度（°）"
 
@@ -382,10 +387,10 @@ class WorkplaceWorkingDataThread(threading.Thread):
                 self.dc.DrawRoundedRectangle(0, 0, w, h, self.window.radius)
 
                 self.event.wait(0.1)
-        finally:
-            if self.dc is not None:
-                del self.dc
+            finally:
+                if self.dc is not None:
+                    self.dc = None
 
     def stop(self):
         self.running = False
-        print("thread<WorkplaceWorkingStatusThread> stopped")
+        print("thread<WorkplaceWorkingDataThread> stopped")

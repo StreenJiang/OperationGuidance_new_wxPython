@@ -30,9 +30,9 @@ class ProductMission(BaseEntity):
                  mission_pn_code: str,
                  mission_status: int,
                  mission_product_sides: list,
+                 mission_indexs: list,
                  creator: str,
                  last_updater: str,
-                 mission_indexs: list = [0, 0],
                  create_time: str = CommonUtils.System_Current_Datetime(),
                  last_update_time: str = CommonUtils.System_Current_Datetime(),
                  is_deleted: bool = False):
@@ -190,8 +190,8 @@ class ProductBolts(BaseEntity):
 
     def GetID(self) -> int:
         return self.__id
-    def GetSBoltName(self) -> tuple:
-        return self.__bolt_position
+    def GetSBoltName(self) -> str:
+        return self.__bolt_name
     def GetBoltPosition(self) -> tuple:
         return self.__bolt_position
     def GetBoltStatus(self) -> int:
