@@ -97,6 +97,11 @@ class ProductMissionView(widgets.CustomViewPanel):
             self.block_panel.GetEventHandler().ProcessEvent(event)
 
     def on_paint(self, event):
+        self.paint_content()
+        event.Skip()
+
+    # 单独建个方法，后续或许要在每个block的点击事件之前检测是否需要重新获取数据并重绘画面
+    def paint_content(self):
         # 从缓存中取出数据
         data = self.get_data()
         # data = []
@@ -129,7 +134,6 @@ class ProductMissionView(widgets.CustomViewPanel):
                 self.create_block_panel(data)
 
         self.Refresh()
-        event.Skip()
 
     # 获取缓存数据
     def get_data(self):

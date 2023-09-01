@@ -196,8 +196,11 @@ class WorkplaceView(wx.Panel):
             event.Skip()
 
     def resize_after(self):
-        print("workplace -> Resizing frame, Resolution: ", self.top_parent.GetClientSize())
-        self.SetSize(self.top_parent.GetClientSize())
+        top_size = self.top_parent.GetClientSize()
+        print("workplace -> Resizing frame, Resolution: ", top_size)
+        if top_size == (0, 0):
+            return
+        self.SetSize(top_size)
         self.Thaw()
         self.is_resizing = False
 
@@ -1037,88 +1040,334 @@ class MiddleBottomPanel(widgets.CustomBorderPanel):
         widgets.CustomBorderPanel.__init__(self, parent, id, border_thickness = border_thickness,
                                            border_color = border_color, margin = margin, radius = radius)
         self.mission_obj = mission_obj
-        self.product_bitmap = None
+        self.mission_indexs = [0, 0]
+        self.product_image = wx.Image()
+        self.product_bitmap = wx.Bitmap()
+        self.product_bitmap_size = (0, 0)
+        self.product_bitmap_position = (0, 0)
         self.bolts = []
+        self.current_working_bolt = None
+        # 用于判断是否需要重新绘制
+        self.mission_indexs_cache = None
+        self.mission_status_cache = None
+        self.bolts_cache = None
+        self.bolts_status_cache = None
+        self.static_bitmap = wx.StaticBitmap(self)
+        # 绑定事件
         self.Bind(wx.EVT_PAINT, self.on_paint)
 
     def get_variables(self):
-        mission_indexs = self.mission_obj.GetMissionIndexs()
-        mission_side = self.mission_obj.GetMissionProductSides()[mission_indexs[0]]
+        self.mission_indexs = self.mission_obj.GetMissionIndexs()
+        mission_side = self.mission_obj.GetMissionProductSides()[self.mission_indexs[0]]
         mission_image = mission_side.GetSideImage().GetImageOriginal()
+        bolts = mission_side.GetBolts()
+
+        # 1. 判断当前indexs是否与之前一致，如果不一致则直接跳过其他判断直接重新获取数据
+        if self.mission_indexs_cache == self.mission_indexs:
+            # 2. 判断当前任务状态是否与之前一致，否则同上
+            if self.mission_status_cache == self.mission_obj.GetMissionStatus():
+                # 3. 判断当前螺丝点位对象数组是否与之前一致，否则同上
+                if self.bolts_cache == bolts:
+                    # 4. 判断缓存点位状态的长度是否与螺丝点位数组长度一直，否则同上
+                    if len(self.bolts_status_cache) == len(bolts):
+                        all_matched = True
+                        for index in range(len(bolts)):
+                            bolt = bolts[index]
+                            # 5. 循环判断每一个缓存点位状态是否与对应的对位状态一致，不一致则退出循环，重新获取数据
+                            if self.bolts_status_cache[index] != bolt.GetBoltStatus():
+                                all_matched = False
+                                break
+                        if all_matched:
+                            return False
+
+        # 重新获取最新数据
+        self.mission_indexs_cache = self.mission_indexs
+        self.mission_status_cache = self.mission_obj.GetMissionStatus()
+        self.bolts_cache = bolts
+        # 重新设置缓存数据
+        self.product_image = CommonUtils.PILImageToWxImage(mission_image)
         self.product_bitmap = CommonUtils.PILImageToWxImage(mission_image).ConvertToBitmap()
-        self.bolts = mission_side.GetBolts()
+
+        # 将当前显示的螺丝点位组件隐藏
+        for bolt in self.bolts:
+            bolt.button.Hide()
+
+        # 循环最新点位设置缓存点位状态及检查点位是否有创建组件
+        self.bolts_status_cache = []
+        for index in range(len(bolts)):
+            bolt = bolts[index]
+            # 设置缓存点位状态
+            self.bolts_status_cache.append(bolt.GetBoltStatus())
+            # 如果没有创建组件则创建组件
+            if not hasattr(bolt, "button"):
+                bolt.button = self.BoltButton(self, mission_obj = self.mission_obj, bolt_obj = bolt, current_index = index)
+                bolt.button.bolt_position = bolt.GetBoltPosition()
+                bolt.button.Hide()
+                # 绑定点击事件（通过覆盖在staticBitmap上的透明panel触发）
+                bolt.button.blank_panel.Bind(wx.EVT_LEFT_DOWN, self.bolt_button_key_down)
+            if self.current_working_bolt is None and index == self.mission_indexs[1]:
+                self.current_working_bolt = bolt.button
+
+        # 更新当前点位数组
+        self.bolts = bolts
+        # 返回True表示数据有更新
+        return True
+
+    def bolt_button_key_down(self, event):
+        bolt_button = event.GetEventObject()
+        # 判断此时选中的螺丝孔位是否就是当前正在工作的螺丝孔位，不是的话继续执行
+        if bolt_button.real_widget is not self.current_working_bolt:
+            # 先将之前螺丝孔位的状态改回其在数据库中的状态
+            bolt = self.current_working_bolt.bolt_obj
+            self.current_working_bolt.set_status_temp(bolt.GetBoltStatus())
+            self.current_working_bolt.mission_obj.mission_status_temp = None
+            self.current_working_bolt.Refresh()
+            # 将此时选中的螺丝孔位的状态改为进行中（先改成拧紧中，因为拧紧中和反松中都是进行中，主要是为了螺丝孔位的显示效果。实际是什么状态在实际操作时会再次确认）
+            bolt_button.real_widget.Refresh()
+            self.current_working_bolt = bolt_button.real_widget
+            # 更新数据库中的数据，修改产品任务对象的indexs值
+            indexs_temp = bolt_button.real_widget.mission_obj.GetMissionIndexs()
+            indexs_temp[1] = bolt_button.real_widget.current_index
+            bolt_button.real_widget.mission_obj.SetMissionIndexs(indexs_temp)
+            bolt_button.real_widget.mission_obj.mission_status_temp = pdctmsn.STATUS_MISSION_READY
+        event.Skip()
 
     def on_size(self, event):
-        # 计算自身size和pos（在父panel计算过了)
-        super().on_size(event)
-
-    def on_paint(self, event):
-        dc = wx.GCDC(wx.PaintDC(self))
-        dc.Clear()
         w, h = self.GetSize()
+
         # 获取最新的数据
         self.get_variables()
 
-        # 重设产品图片的size和pos
-        if self.product_bitmap is not None:
-            image = self.product_bitmap.ConvertToImage()
-            # 计算logo的size和pos
-            i_size, i_pos = self.calc_product_image(w, h, image.GetSize())
-            # 重新设置图片的尺寸
-            image.Rescale(i_size[0], i_size[1], wx.IMAGE_QUALITY_BILINEAR)
-            # 重新绘制bitmap
-            bitmap = wx.Bitmap(image)
-            dc.DrawBitmap(bitmap, i_pos, bitmap.GetMask() is not None)
+        # 重新计算产品图片的size和pos（提前计算好，绘制的时候就不需要再算了，直接拿到最新的图片绘制即可）
+        self.product_bitmap_size = self.calc_product_image_size(w, h, self.product_image.GetSize())
+        self.product_bitmap_position = self.calc_product_image_pos(w, h, self.product_bitmap_size)
 
-        b_size = self.calc_bolt_size(w, h)
-        # 边框厚度
-        border_thickness = math.ceil(b_size[0] / 20)
-        for index in range(len(self.bolts)):
-            bolt = self.bolts[index]
-            b_x, b_y = bolt.GetBoltPosition()
-            b_w, b_h = b_size
+        # 重新计算螺丝点位组件的size和pos（提前计算好并且要立马设置好，以免在paint事件里绘制时会频繁触发paint事件）
+        self.calc_and_set_bolt_size_and_pos()
+        wx.CallAfter(self.show_bolt_buttons)
 
-            # 获取字体
-            bolt_num_str = str(bolt.GetID())
-            font_temp = self.GetFont()
-            font_temp.SetWeight(wx.FONTWEIGHT_BOLD)
-            font_temp.SetPointSize(int(b_w / 3) + 2)
-            dc.SetTextForeground(configs.COLOR_WORKPLACE_BOLT_NUMBER)
-            dc.SetFont(font_temp)
-            tw, th = dc.GetTextExtent(bolt_num_str)
-            # 小标题size、pos、背景颜色
-            dc.SetPen(wx.Pen(configs.COLOR_WORKPLACE_BOLT_BORDER, border_thickness))
-            dc.SetBrush(wx.Brush(configs.COLOR_WORKPLACE_BOLT_BACKGROUND_WAITING))
-            dc.DrawCircle((b_x // 2 + b_w // 2, b_y // 2 + b_h // 2), b_w // 2 - border_thickness)
-            # 绘制完背景再绘制文字
-            dc.DrawText(bolt_num_str,
-                        b_x // 2 + math.ceil((b_w - tw) / 2),
-                        b_y // 2 + math.ceil((b_h - th) / 2) - math.ceil(th / 25))
+        super().on_size(event)
 
-        # 删除DC
-        del dc
+    def on_paint(self, event):
+        # 获取最新的数据
+        self.get_variables()
 
-    def set_product_image(self, bitmap):
-        self.product_bitmap = bitmap
+        dc = wx.GCDC(wx.PaintDC(self))
+        dc.Clear()
+        self.calc_and_set_bolt_size_and_pos()
 
-    def calc_product_image(self, w, h, image_size):
+        # 重新设置图片的尺寸
+        image = self.product_image.Copy()
+        image.Rescale(self.product_bitmap_size[0], self.product_bitmap_size[1], wx.IMAGE_QUALITY_BILINEAR)
+        # 重新绘制bitmap
+        self.product_bitmap = wx.Bitmap(image)
+        # 绘制产品图片
+        self.static_bitmap.SetPosition(self.product_bitmap_position)
+        self.static_bitmap.SetBitmap(self.product_bitmap)
+
+        wx.CallAfter(self.show_bolt_buttons)
+        event.Skip()
+
+    def show_bolt_buttons(self):
+        # 显示螺丝点位
+        for bolt in self.bolts:
+            bolt.button.Show()
+
+    def calc_product_image_size(self, w, h, image_size):
         # 以高为基准，高一定保持与panel一致（填满），因为没有任何屏幕是高比宽长的除非屏幕竖起来
         # i_w, i_h = image_size
         # ratio = h / i_h
         # if i_h > i_w:
         #     ratio = w / i_w
         # i_w, i_h = CommonUtils.CalculateNewSizeWithSameRatio((i_w, i_h), ratio)
-        return (w, h), (0, 0)
+        return w, h
 
-    def calc_bolt_size(self, w, h):
-        b_w = b_h = math.ceil(w / 40) + math.ceil(h / 25)
+    def calc_product_image_pos(self, w, h, image_size):
+        # 以高为基准，高一定保持与panel一致（填满），因为没有任何屏幕是高比宽长的除非屏幕竖起来
+        # i_w, i_h = image_size
+        # ratio = h / i_h
+        # if i_h > i_w:
+        #     ratio = w / i_w
+        # i_w, i_h = CommonUtils.CalculateNewSizeWithSameRatio((i_w, i_h), ratio)
+        return 0, 0
+
+    def calc_and_set_bolt_size_and_pos(self):
+        b_size = self.calc_bolt_size()
+        for bolt in self.bolts:
+            bolt_pos = bolt.button.bolt_position
+            bolt.button.SetSize(b_size)
+            bolt.button.SetPosition(self.calc_bolt_pos(bolt_pos))
+            bolt.button.blank_panel.SetPosition(self.calc_bolt_pos(bolt_pos))
+            bolt.button.Refresh()
+
+    def calc_bolt_size(self):
+        i_w, i_h = self.product_bitmap_size
+        b_w = b_h = math.ceil(i_w / 40) + math.ceil(i_h / 25)
         return b_w, b_h
 
-    def calc_bolt_panel_pos(self, b_size, bolt_pos):
-        b_w, b_h = b_size
-        bolt_x, bolt_y = bolt_pos
-        return bolt_x - b_w // 2, bolt_y - b_h // 2
+    def calc_bolt_pos(self, bolt_position):
+        i_w, i_h = self.product_bitmap_size
+        i_x, i_y = self.product_bitmap_position
+        bolt_x, bolt_y = bolt_position
+        return bolt_x // 2, bolt_y // 2
 
+
+    # 测试panel
+    class BlankPanel(wx.Panel):
+        def __init__(self, parent):
+            wx.Panel.__init__(self, parent, wx.ID_ANY)
+
+
+    # 螺丝点位block按钮内部组件
+    class BoltButton(wx.Control):
+        def __init__(self, parent, id = wx.ID_ANY, pos = wx.DefaultPosition,
+                     size = wx.DefaultSize, validator = wx.DefaultValidator, name = "BoltButton",
+                     mission_obj: pdctmsn.ProductMission = None, bolt_obj: pdctmsn.ProductBolt = None, current_index: int = 0):
+            wx.Control.__init__(self, parent = parent, id = id, pos = pos, size = size,
+                                style = wx.BORDER_NONE, validator = validator, name = name)
+            self.mission_obj = mission_obj
+            self.bolt_obj = bolt_obj
+            self.current_index = current_index
+            self.label = str(self.current_index + 1)
+            self.status_temp = None
+            self.status_temp = self.bolt_obj.GetBoltStatus()
+
+            self.image_size = (0, 0)
+            self.image_position = (0, 0)
+            self.bolt_position = (0, 0)
+            self.border_thickness = 0
+            self.current_background_color = self.get_color_by_status()[0]
+            # 弄一个parent是产品图片staticBitmap的透明的panel，用来触发此组件本身的事件（因为staticBitmap挡住了）
+            self.blank_panel = wx.Panel(parent.static_bitmap, wx.ID_ANY, style = wx.TRANSPARENT_WINDOW)
+            self.blank_panel.real_widget = self
+
+            self.Bind(wx.EVT_ERASE_BACKGROUND, lambda event: None)
+            self.blank_panel.Bind(wx.EVT_ERASE_BACKGROUND, lambda event: None)
+            self.Bind(wx.EVT_SIZE, self.on_size)
+            self.Bind(wx.EVT_PAINT, self.on_paint)
+            self.Bind(wx.EVT_SHOW, self.on_show)
+            self.blank_panel.Bind(wx.EVT_ENTER_WINDOW, self.on_enter)
+            self.blank_panel.Bind(wx.EVT_LEAVE_WINDOW, self.on_leave)
+            self.blank_panel.Bind(wx.EVT_LEFT_DOWN, self.on_left_down)
+            self.blank_panel.Bind(wx.EVT_LEFT_DCLICK, self.on_left_down)
+            self.blank_panel.Bind(wx.EVT_LEFT_UP, self.on_left_up)
+
+        def set_status_temp(self, status):
+            self.status_temp = status
+            self.current_background_color = self.get_color_by_status()[0]
+
+        def on_show(self, event):
+            if self.blank_panel:
+                self.blank_panel.Show(event.IsShown())
+
+        def on_size(self, event):
+            w, h = self.GetSize()
+            self.blank_panel.SetSize(w, h)
+            self.border_thickness = math.ceil(w / 20)
+            event.Skip()
+
+        def on_paint(self, event):
+            w, h = self.GetSize()
+            bitmap = wx.Bitmap(w, h)
+            dc = wx.MemoryDC(bitmap)
+
+            # 让背景全黑，方便后续设置透明色
+            dc.SetBackground(wx.Brush(wx.BLACK))
+            dc.Clear()
+
+            # 设置画笔、画刷的颜色
+            dc.SetPen(wx.Pen(configs.COLOR_WORKPLACE_BOLT_BORDER, self.border_thickness))
+            dc.SetBrush(wx.Brush(self.current_background_color))
+
+            # 画出bitmap的形状
+            dc.DrawCircle(w // 2, h // 2, (w - self.border_thickness) // 2)
+
+            # 绘制文字
+            dc.SetTextForeground(configs.COLOR_WORKPLACE_BOLT_NUMBER)
+            font_temp = self.GetFont()
+            font_temp.SetWeight(wx.FONTWEIGHT_BOLD)
+            font_temp.SetPointSize(int(w / 3) + 2)
+            dc.SetFont(font_temp)
+            tw, th = dc.GetTextExtent(self.label)
+            dc.DrawText(self.label, (w - tw) // 2, (h - th) // 2)
+
+            # 设置透明色
+            image = bitmap.ConvertToImage()
+            if not image.HasAlpha():
+                image.InitAlpha()
+            for y in range(image.GetHeight()):
+                for x in range(image.GetWidth()):
+                    pix = wx.Colour(image.GetRed(x, y),
+                                    image.GetGreen(x, y),
+                                    image.GetBlue(x, y),
+                                    image.GetAlpha(x, y))
+                    if pix == wx.BLACK:
+                        image.SetAlpha(x, y, 0)
+
+            # 画好了
+            bitmap = image.ConvertToBitmap()
+
+            dc = wx.GCDC(wx.PaintDC(self))
+            dc.DrawBitmap(bitmap, (0, 0), bitmap.GetMask() is not None)
+
+            # 删除DC
+            del dc
+
+        def on_enter(self, event):
+            self.current_background_color = self.get_color_by_status()[1]
+            self.Refresh()
+            event.Skip()
+
+        def on_leave(self, event):
+            self.current_background_color = self.get_color_by_status()[0]
+            self.Refresh()
+            event.Skip()
+
+        def on_left_down(self, event):
+            self.current_background_color = self.get_color_by_status()[2]
+            self.Refresh()
+            event.Skip()
+
+        def on_left_up(self, event):
+            self.current_background_color = self.get_color_by_status()[0]
+            self.Refresh()
+            event.Skip()
+
+        def get_color_by_status(self):
+            if self.status_temp == pdctmsn.STATUS_SCREW_GUN_DEFAULT:
+                return [
+                    configs.COLOR_WORKPLACE_BOLT_BG_WAITING,
+                    configs.COLOR_WORKPLACE_BOLT_BG_WAITING_HOVER,
+                    configs.COLOR_WORKPLACE_BOLT_BG_WAITING_KEY_DOWN,
+                ]
+            elif self.status_temp == pdctmsn.STATUS_SCREW_GUN_TIGHTENING \
+                    or self.status_temp == pdctmsn.STATUS_SCREW_GUN_LOOSENING:
+                return [
+                    configs.COLOR_WORKPLACE_BOLT_BG_WORKING,
+                    configs.COLOR_WORKPLACE_BOLT_BG_WORKING_HOVER,
+                    configs.COLOR_WORKPLACE_BOLT_BG_WORKING_KEY_DOWN,
+                ]
+            elif self.status_temp == pdctmsn.STATUS_SCREW_GUN_TIGHTENING_COMPLETE \
+                    or self.status_temp == pdctmsn.STATUS_SCREW_GUN_LOOSENING_COMPLETE:
+                return [
+                    configs.COLOR_WORKPLACE_BOLT_BG_DONE,
+                    configs.COLOR_WORKPLACE_BOLT_BG_DONE_HOVER,
+                    configs.COLOR_WORKPLACE_BOLT_BG_DONE_KEY_DOWN,
+                ]
+            elif self.status_temp == pdctmsn.STATUS_SCREW_GUN_TIGHTENING_ERROR \
+                    or self.status_temp == pdctmsn.STATUS_SCREW_GUN_LOOSENING_ERROR:
+                return [
+                    configs.COLOR_WORKPLACE_BOLT_BG_ERROR,
+                    configs.COLOR_WORKPLACE_BOLT_BG_ERROR_HOVER,
+                    configs.COLOR_WORKPLACE_BOLT_BG_ERROR_KEY_DOWN,
+                ]
+            else:
+                print(f"螺丝孔位状态有有误：current_index = [{self.current_index}], status_temp = [{self.status_temp}]")
+                return [
+                    configs.COLOR_WORKPLACE_BOLT_BG_WAITING,
+                    configs.COLOR_WORKPLACE_BOLT_BG_WAITING_HOVER,
+                    configs.COLOR_WORKPLACE_BOLT_BG_WAITING_KEY_DOWN,
+                ]
 
 # 右侧上方的工作状态panel
 class RightTopPanel(widgets.CustomBorderPanel):
@@ -1127,7 +1376,6 @@ class RightTopPanel(widgets.CustomBorderPanel):
         widgets.CustomBorderPanel.__init__(self, parent, id, border_thickness = border_thickness,
                                            border_color = border_color, margin = margin, radius = radius)
         self.mission_obj = mission_obj
-        self.Bind(wx.EVT_ERASE_BACKGROUND, lambda event: None)
         self.GetParent().GetParent().register_thread(
             wThread.WorkplaceWorkingStatusThread, self, mission_obj
         )
@@ -1140,10 +1388,69 @@ class RightCenterPanel(widgets.CustomBorderPanel):
         widgets.CustomBorderPanel.__init__(self, parent, id, border_thickness = border_thickness,
                                            border_color = border_color, margin = margin, radius = radius)
         self.realtime_data_obj = realtime_data_obj
-        self.Bind(wx.EVT_ERASE_BACKGROUND, lambda event: None)
+        self.w_h_difference = None
+        self.horizontal_indent = None
+        self.vertical_indent = None
+        self.torque_title = "扭矩（N*m)"
+        self.angle_title = "角度（°）"
+        self.title_font_size = None
+        self.title_text_size = None
+        self.torque_font_size = None
+        self.angle_font_size = None
+
+        self.Bind(wx.EVT_PAINT, self.on_paint)
         self.GetParent().GetParent().register_thread(
             wThread.WorkplaceWorkingDataThread, self, realtime_data_obj
         )
+
+    def on_size(self, event):
+        w, h = self.GetSize()
+
+        # 水平、垂直缩进
+        self.w_h_difference = math.ceil((h - w) / 30)
+        self.horizontal_indent = math.ceil(w / 50)
+        self.vertical_indent = math.ceil(h / 40) + self.w_h_difference
+
+        # 扭矩标题和扭矩标题的字体大小
+        self.title_font_size = int(w / 30 + h / 25) + 1
+        # 绘制扭矩实时数据的字体大小
+        self.torque_font_size = int(w / 27 + h / 6.3)
+        # 绘制角度实时数据的字体大小
+        self.angle_font_size = int(w / 50 + h / 8.5)
+
+        super().on_size(event)
+
+    def on_paint(self, event):
+        w, h = self.GetSize()
+        dc = wx.GCDC(wx.PaintDC(self))
+
+        # 获取字体
+        font_temp = self.GetFont()
+        font_temp.SetWeight(wx.FONTWEIGHT_BOLD)
+        dc.SetTextForeground(configs.COLOR_TEXT_BLACK)
+
+        # 标题的字体大小
+        font_temp.SetPointSize(self.title_font_size)
+        dc.SetFont(font_temp)
+        self.title_text_size = dc.GetTextExtent(self.torque_title)
+        title_w, title_h = self.title_text_size
+
+        # 标题size、pos、背景颜色
+        dc.SetPen(wx.Pen(configs.COLOR_WORKPLACE_BLOCK_TITLE_BACKGROUND))
+        dc.SetBrush(wx.Brush(configs.COLOR_WORKPLACE_BLOCK_TITLE_BACKGROUND))
+        dc.DrawRoundedRectangle(0, 0, w, title_h + self.vertical_indent * 2, 0)
+        # 绘制完背景再绘制扭矩标题
+        dc.DrawText(self.torque_title, self.horizontal_indent, self.vertical_indent)
+
+        # 扭矩标题的字体大小
+        # 标题size、pos、背景颜色
+        dc.SetPen(wx.Pen(configs.COLOR_WORKPLACE_BLOCK_TITLE_BACKGROUND))
+        dc.SetBrush(wx.Brush(configs.COLOR_WORKPLACE_BLOCK_TITLE_BACKGROUND))
+        dc.DrawRoundedRectangle(0, math.ceil(h / 10 * 5.5), w, title_h + self.vertical_indent * 2, 0)
+        # 绘制完背景再绘制角度标题
+        dc.DrawText(self.angle_title, self.horizontal_indent, math.ceil(h / 10 * 5.5) + self.vertical_indent)
+
+        del dc
 
 
 # 右侧下方的产品面panel
@@ -1189,7 +1496,7 @@ class RightBottomPanel(widgets.CustomBorderPanel):
         indexs_new = self.indexs.copy()
         indexs_new[0] = 0
         self.mission_obj.SetMissionIndexs(indexs_new)
-        self.refresh_all(indexs_new[0] != self.indexs[0])
+        self.refresh_Middle_Bottom_panel(indexs_new[0] != self.indexs[0])
         event.Skip()
 
     def backward_on_left_down(self, event):
@@ -1198,7 +1505,7 @@ class RightBottomPanel(widgets.CustomBorderPanel):
         if indexs_new[0] < 0:
             indexs_new[0] = 0
         self.mission_obj.SetMissionIndexs(indexs_new)
-        self.refresh_all(indexs_new[0] != self.indexs[0])
+        self.refresh_Middle_Bottom_panel(indexs_new[0] != self.indexs[0])
         event.Skip()
 
     def forward_on_left_down(self, event):
@@ -1207,39 +1514,25 @@ class RightBottomPanel(widgets.CustomBorderPanel):
         if indexs_new[0] + 1 > self.mission_side_count:
             indexs_new[0] = self.mission_side_count - 1
         self.mission_obj.SetMissionIndexs(indexs_new)
-        self.refresh_all(indexs_new[0] != self.indexs[0])
+        self.refresh_Middle_Bottom_panel(indexs_new[0] != self.indexs[0])
         event.Skip()
 
     def forward_fast_on_left_down(self, event):
         indexs_new = self.indexs.copy()
         indexs_new[0] = self.mission_side_count - 1
         self.mission_obj.SetMissionIndexs(indexs_new)
-        self.refresh_all(indexs_new[0] != self.indexs[0])
+        self.refresh_Middle_Bottom_panel(indexs_new[0] != self.indexs[0])
         event.Skip()
 
-    def refresh_all(self, refresh: bool = False):
+    def refresh_Middle_Bottom_panel(self, refresh: bool = False):
         self.get_variables()
         self.get_image()
         if refresh:
-            self.GetParent().Refresh()
+            self.GetParent().panel_middle_bottom.Refresh()
+            self.Refresh()
 
     def on_size(self, event):
         w, h = self.GetSize()
-        # 重新获取最新的参数
-        self.get_image()
-
-        # 重设logo的size
-        image = self.image.Copy()
-        # 计算logo的size
-        # TODO: 后续需要根据图片选定的坐标和窗口的比例进行精准的绘制图片
-        top_w, top_h = self.GetTopLevelParent().GetSize()
-        i_w = w * 0.8
-        i_h = i_w / (top_w / top_h)  # 设置跟主窗体一样的长宽比例
-        # 重新设置图片的尺寸
-        image.Rescale(i_w, i_h, wx.IMAGE_QUALITY_BILINEAR)
-        # 重新绘制bitmap
-        self.bitmap = image.ConvertToBitmap()
-
         super().on_size(event)
 
     def on_paint(self, event):
@@ -1247,6 +1540,7 @@ class RightBottomPanel(widgets.CustomBorderPanel):
         w, h = self.GetSize()
         # 重新获取最新的参数
         self.get_variables()
+        self.get_image()
 
         # 水平、垂直缩进
         w_h_difference = math.ceil((h - w) / 50)
@@ -1258,19 +1552,30 @@ class RightBottomPanel(widgets.CustomBorderPanel):
         font_temp.SetPointSize(int(w / 30 + h / 25) + 1)
         dc.SetFont(font_temp)
         tw, th = dc.GetTextExtent(self.mission_side_name)
-        title_h = th + vertical_indent * 2
+        title_bg_h = th + vertical_indent * 2
         # 小标题size、pos、背景颜色
-        dc.SetPen(wx.Pen(configs.COLOR_WORKPLACE_BLOCK_TITLE_BACKGROUND))
-        dc.SetBrush(wx.Brush(configs.COLOR_WORKPLACE_BLOCK_TITLE_BACKGROUND))
-        dc.DrawRoundedRectangle(0, 0, w, title_h, 0)
+        dc.SetTextForeground(configs.COLOR_COMMON_WHITE)
+        dc.SetPen(wx.Pen(configs.COLOR_SYSTEM_LOGO, 1))
+        dc.SetBrush(wx.Brush(configs.COLOR_SYSTEM_LOGO))
+        dc.DrawRoundedRectangle(0, 0, w, title_bg_h, 0)
         # 绘制完背景再绘制文字
         dc.DrawText(self.mission_side_name, math.ceil((w - tw) / 2), vertical_indent)
 
-        # 计算logo的pos
+        # 重设产品缩略图的size和pos
+        # TODO: 后续需要根据图片选定的坐标和窗口的比例进行精准的绘制图片
+        top_w, top_h = self.GetTopLevelParent().GetSize()
+        i_h = (h - title_bg_h) * 0.7
+        i_w = i_h / (top_h / top_w)
+        # i_w = w * 0.8
+        # i_h = i_w / (top_w / top_h)  # 设置跟主窗体一样的长宽比例
+        # 重新设置图片的尺寸
+        self.image.Rescale(i_w, i_h, wx.IMAGE_QUALITY_BILINEAR)
+        # 重新绘制bitmap
+        self.bitmap = self.image.ConvertToBitmap()
         i_w, i_h = self.bitmap.GetSize()
         # 计算图片、按钮的间隙
-        content_v_gap = math.ceil((h - i_h) / 10)
-        i_pos = (math.ceil((w - i_w) / 2), math.ceil(title_h + content_v_gap))
+        content_v_gap = math.ceil((h - i_h) / 9.5)
+        i_pos = (math.ceil((w - i_w) / 2), math.ceil(title_bg_h + content_v_gap))
         dc.SetPen(wx.Pen(configs.COLOR_CONTENT_BLOCK_BORDER_2, 1))
         border_pos = (i_pos[0] - 1, i_pos[1] - 1)
         border_size = (i_w + 2, i_h + 2)
@@ -1280,17 +1585,17 @@ class RightBottomPanel(widgets.CustomBorderPanel):
         # 重新计算页码显示文字的字体大小
         font_temp.SetWeight(wx.FONTWEIGHT_NORMAL)
         font_temp.SetWeight(wx.FONTWEIGHT_BOLD)
-        font_temp.SetPointSize(int(w / 50 + h / 30) + 1)
+        font_temp.SetPointSize(int(w / 35 + h / 25) + 1)
         dc.SetTextForeground(configs.COLOR_TEXT_THEME)
         dc.SetFont(font_temp)
         page_text = str(self.current_page_num) + "/" + str(self.mission_side_count)
         tw, th = dc.GetTextExtent(page_text)
         # 按钮盒页码文字的y轴数值
-        b_y = title_h + i_h + content_v_gap * 2
-        dc.DrawText(page_text, math.ceil((w - tw) / 2), b_y - th / 10)
+        b_y = title_bg_h + i_h + content_v_gap * 2
+        dc.DrawText(page_text, math.ceil((w - tw) / 2), b_y - content_v_gap / 35 - abs(w - h) / 20)
         # 重新计算按钮的size
         b_w, b_h = self.backward_fast.GetSize()
-        b_h_new = h - title_h - i_h - content_v_gap * 3
+        b_h_new = h - title_bg_h - i_h - content_v_gap * 3
         b_w, b_h = CommonUtils.CalculateNewSizeWithSameRatio((b_w, b_h), b_h_new / b_h)
         # 按钮之间的gap
         w_gap = math.ceil((w / 2 - 2 * b_w - tw / 2) / 3)

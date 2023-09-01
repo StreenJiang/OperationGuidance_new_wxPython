@@ -1,8 +1,7 @@
-import math
-import random
-
 import wx
 import threading
+import math
+import traceback
 
 from src.main import configs, widgets
 import src.main.models.ProductMission as pdctmsn
@@ -31,44 +30,55 @@ class WorkplaceWorkingStatusThread(threading.Thread):
         print("thread<WorkplaceWorkingStatusThread> running")
         self.running = True
         while self.running:
-            # 获取产品任务对象
-            mission_status = self.mission_obj.GetMissionStatus()
+            try:
+                # 获取产品任务对象
+                mission_status = self.mission_obj.GetMissionStatus()
+                mission_status_temp = self.mission_obj.mission_status_temp
+                if mission_status_temp is not None:
+                    mission_status = mission_status_temp
 
-            if mission_status == pdctmsn.STATUS_MISSION_WORKING:
-                # 根据不同状态进行不同的处理
-                if not self.handle_process():
-                    break
-            elif mission_status == pdctmsn.STATUS_MISSION_DEFAULT:
-                self.handle_others("待机", configs.COLOR_SYSTEM_LOGO)
-                print("STATUS_MISSION_DEFAULT: waiting for any progress...")
-            elif mission_status == pdctmsn.STATUS_MISSION_READY:
-                self.handle_others("就绪", configs.COLOR_COMMON_GREEN)
+                if mission_status == pdctmsn.STATUS_MISSION_WORKING:
+                    # 根据不同状态进行不同的处理
+                    if not self.handle_process():
+                        break
+                elif mission_status == pdctmsn.STATUS_MISSION_DEFAULT:
+                    self.handle_others("待机", configs.COLOR_SYSTEM_LOGO)
+                    print("STATUS_MISSION_DEFAULT: waiting for any progress...")
+                elif mission_status == pdctmsn.STATUS_MISSION_READY:
+                    self.handle_others("就绪", configs.COLOR_COMMON_GREEN)
 
-            self.event.wait(0.25)
+                self.event.wait(0.25)
+            except Exception as e:
+                print("WorkplaceWorkingStatusThread -> e: ", e)
+                traceback.print_exc()
 
     def handle_others(self, status_text, background_color):
-        if self.size_cache is None or self.size_cache != self.window.GetSize():
-            self.size_cache = self.window.GetSize()
-        w, h = self.size_cache
-        dc = wx.WindowDC(self.window)
+        dc = wx.BufferedDC(wx.WindowDC(self.window), wx.Bitmap(self.window.GetSize()))
+        try:
+            if self.size_cache is None or self.size_cache != self.window.GetSize():
+                self.size_cache = self.window.GetSize()
+            w, h = self.size_cache
 
-        # 背景设为logo的主题色
-        dc.SetBackground(wx.Brush(background_color))
-        dc.Clear()
+            # 背景设为logo的主题色
+            dc.SetBackground(wx.Brush(background_color))
+            dc.Clear()
 
-        # 获取字体
-        font_temp = self.window.GetFont()
-        font_temp.SetWeight(wx.FONTWEIGHT_BOLD)
-        dc.SetTextForeground(configs.COLOR_COMMON_WHITE)
+            # 获取字体
+            font_temp = self.window.GetFont()
+            font_temp.SetWeight(wx.FONTWEIGHT_BOLD)
+            dc.SetTextForeground(configs.COLOR_COMMON_WHITE)
 
-        # 绘制待机字样
-        font_temp.SetPointSize(int(w / 9 + h / 7) + 2)
-        dc.SetFont(font_temp)
-        tw, th = dc.GetTextExtent(status_text)
-        t_y = math.ceil((h - th) / 2)
-        dc.DrawText(status_text, (w - tw) // 2, t_y)
-
-        del dc
+            # 绘制待机字样
+            font_temp.SetPointSize(int(w / 9 + h / 7) + 2)
+            dc.SetFont(font_temp)
+            tw, th = dc.GetTextExtent(status_text)
+            t_y = math.ceil((h - th) / 2)
+            dc.DrawText(status_text, (w - tw) // 2, t_y)
+        except Exception as e:
+            print("handle_others -> e", e)
+            traceback.print_exc()
+        finally:
+            del dc
 
     def handle_process(self):
         # 获取当前正在操作的产品面/孔位的indexs
@@ -77,6 +87,9 @@ class WorkplaceWorkingStatusThread(threading.Thread):
         bolt_temp = self.mission_obj.GetMissionProductSides()[indexs[0]].GetBolts()[indexs[1]]
         # 获取当前正在操作的螺丝孔位的状态
         working_status = bolt_temp.GetBoltStatus()
+        bolt_status_temp = bolt_temp.bolt_status_temp
+        if bolt_status_temp is not None:
+            working_status = bolt_status_temp
         # 之后是否继续循环的标识
         continue_flag = True
 
@@ -115,7 +128,9 @@ class WorkplaceWorkingStatusThread(threading.Thread):
                                            self.tightening_icon, True, indexs[1])
             child_thread.start()
             self.child_threads[working_status] = child_thread
-
+        else:
+            child_thread = self.child_threads[working_status]
+            child_thread.bolt_num = indexs[1]
     def handle_tightening_complete(self, indexs):
         self.clear_thread()
         self.handle_complete(True, indexs)
@@ -147,80 +162,90 @@ class WorkplaceWorkingStatusThread(threading.Thread):
             self.child_threads.clear()
 
     def handle_complete(self, operation_flag, indexs):
-        if self.size_cache is None or self.size_cache != self.window.GetSize():
-            self.size_cache = self.window.GetSize()
-        w, h = self.size_cache
-        dc = wx.WindowDC(self.window)
-        status_text = "OK"
-        if operation_flag:
-            message = f"[{indexs[1] + 1}]号螺丝拧紧合格"
-        else:
-            message = f"[{indexs[1] + 1}]号螺丝反松完成"
+        dc = wx.BufferedDC(wx.WindowDC(self.window))
+        try:
+            status_text = "OK"
+            if self.size_cache is None or self.size_cache != self.window.GetSize():
+                self.size_cache = self.window.GetSize()
+            w, h = self.size_cache
 
-        # 背景设为绿色
-        dc.SetBackground(wx.Brush(configs.COLOR_COMMON_GREEN))
-        dc.Clear()
+            if operation_flag:
+                message = f"[{indexs[1] + 1}]号螺丝拧紧合格"
+            else:
+                message = f"[{indexs[1] + 1}]号螺丝反松完成"
 
-        # 获取字体
-        font_temp = self.window.GetFont()
-        font_temp.SetWeight(wx.FONTWEIGHT_BOLD)
-        dc.SetTextForeground(configs.COLOR_COMMON_WHITE)
+            # 背景设为绿色
+            dc.SetBackground(wx.Brush(configs.COLOR_COMMON_GREEN))
+            dc.Clear()
 
-        # 额外的垂直缩进
-        vertical_indent = math.fabs((h - w) / 3) + 5
-        # 绘制上方OK文字
-        font_temp.SetPointSize(int(w / 6 + h / 5) + 2)
-        dc.SetFont(font_temp)
-        tw, th = dc.GetTextExtent(status_text)
-        t_y = math.ceil((h - th) / 2) - vertical_indent
-        dc.DrawText(status_text, (w - tw) // 2, t_y)
+            # 获取字体
+            font_temp = self.window.GetFont()
+            font_temp.SetWeight(wx.FONTWEIGHT_BOLD)
+            dc.SetTextForeground(configs.COLOR_COMMON_WHITE)
 
-        # 绘制下方文字描述
-        font_temp.SetPointSize(int(w / 30 + h / 40) + 1)
-        dc.SetFont(font_temp)
-        tw, th = dc.GetTextExtent(message)
-        t_y = h - th - vertical_indent
-        dc.DrawText(message, (w - tw) // 2, t_y)
+            # 额外的垂直缩进
+            vertical_indent = math.fabs((h - w) / 3) + 5
+            # 绘制上方OK文字
+            font_temp.SetPointSize(int(w / 6 + h / 5) + 2)
+            dc.SetFont(font_temp)
+            tw, th = dc.GetTextExtent(status_text)
+            t_y = math.ceil((h - th) / 2) - vertical_indent
+            dc.DrawText(status_text, (w - tw) // 2, t_y)
 
-        del dc
+            # 绘制下方文字描述
+            font_temp.SetPointSize(int(w / 30 + h / 40) + 1)
+            dc.SetFont(font_temp)
+            tw, th = dc.GetTextExtent(message)
+            t_y = h - th - vertical_indent
+            dc.DrawText(message, (w - tw) // 2, t_y)
+        except Exception as e:
+            print("handle_complete -> e: ", )
+            traceback.print_exc()
+        finally:
+            del dc
 
     def handle_error(self, operation_flag, indexs):
-        if self.size_cache is None or self.size_cache != self.window.GetSize():
-            self.size_cache = self.window.GetSize()
-        w, h = self.size_cache
-        dc = wx.WindowDC(self.window)
-        status_text = "ERROR"
-        if operation_flag:
-            message = f"[{indexs[1] + 1}]号螺丝拧紧错误"
-        else:
-            message = f"[{indexs[1] + 1}]号螺丝反松错误"
+        dc = wx.BufferedDC(wx.WindowDC(self.window))
+        try:
+            status_text = "ERROR"
+            if self.size_cache is None or self.size_cache != self.window.GetSize():
+                self.size_cache = self.window.GetSize()
+            w, h = self.size_cache
 
-        # 背景设为红色
-        dc.SetBackground(wx.Brush(configs.COLOR_COMMON_RED))
-        dc.Clear()
+            if operation_flag:
+                message = f"[{indexs[1] + 1}]号螺丝拧紧错误"
+            else:
+                message = f"[{indexs[1] + 1}]号螺丝反松错误"
 
-        # 获取字体
-        font_temp = self.window.GetFont()
-        font_temp.SetWeight(wx.FONTWEIGHT_BOLD)
-        dc.SetTextForeground(configs.COLOR_COMMON_WHITE)
+            # 背景设为红色
+            dc.SetBackground(wx.Brush(configs.COLOR_COMMON_RED))
+            dc.Clear()
 
-        # 额外的垂直缩进
-        vertical_indent = math.fabs((h - w) / 3) + 5
-        # 绘制上方OK文字
-        font_temp.SetPointSize(int(w / 13 + h / 11) + 1)
-        dc.SetFont(font_temp)
-        tw, th = dc.GetTextExtent(status_text)
-        t_y = math.ceil((h - th) / 2) - vertical_indent
-        dc.DrawText(status_text, (w - tw) // 2, t_y)
+            # 获取字体
+            font_temp = self.window.GetFont()
+            font_temp.SetWeight(wx.FONTWEIGHT_BOLD)
+            dc.SetTextForeground(configs.COLOR_COMMON_WHITE)
 
-        # 绘制下方文字描述
-        font_temp.SetPointSize(int(w / 30 + h / 40) + 1)
-        dc.SetFont(font_temp)
-        tw, th = dc.GetTextExtent(message)
-        t_y = h - th - vertical_indent
-        dc.DrawText(message, (w - tw) // 2, t_y)
+            # 额外的垂直缩进
+            vertical_indent = math.fabs((h - w) / 3) + 5
+            # 绘制上方OK文字
+            font_temp.SetPointSize(int(w / 13 + h / 11) + 1)
+            dc.SetFont(font_temp)
+            tw, th = dc.GetTextExtent(status_text)
+            t_y = math.ceil((h - th) / 2) - vertical_indent
+            dc.DrawText(status_text, (w - tw) // 2, t_y)
 
-        del dc
+            # 绘制下方文字描述
+            font_temp.SetPointSize(int(w / 30 + h / 40) + 1)
+            dc.SetFont(font_temp)
+            tw, th = dc.GetTextExtent(message)
+            t_y = h - th - vertical_indent
+            dc.DrawText(message, (w - tw) // 2, t_y)
+        except Exception as e:
+            print("handle_error -> e: ", e)
+            traceback.print_exc()
+        finally:
+            del dc
 
     def stop(self):
         self.running = False
@@ -237,21 +262,25 @@ class WorkplaceWorkingStatusThread(threading.Thread):
             self.window = window
             self.icon_image = icon_image
             self.clockwise = clockwise
-            if self.clockwise:
-                self.message = f"正在拧紧[{bolt_num + 1}]号螺丝"
-            else:
-                self.message = f"正在反松[{bolt_num + 1}]号螺丝"
+            self.bolt_num = bolt_num
+            self.message = None
 
             self.running = True
-            self.dc = None
             self.size_cache = None
             self.angle = 0
             self.angle_span = 15 * math.pi / 180
+
+        def update_message(self):
+            if self.clockwise:
+                self.message = f"正在拧紧[{self.bolt_num + 1}]号螺丝"
+            else:
+                self.message = f"正在反松[{self.bolt_num + 1}]号螺丝"
 
         def run(self) -> None:
             print(f"thread<IconRotate: type = {self.thread_type}> rotating")
             self.running = True
             while self.running:
+                dc = wx.BufferedDC(wx.WindowDC(self.window))
                 try:
                     image = self.icon_image.Copy()
 
@@ -259,7 +288,6 @@ class WorkplaceWorkingStatusThread(threading.Thread):
                     if self.size_cache is None or self.size_cache != self.window.GetSize():
                         self.size_cache = self.window.GetSize()
                     w, h = self.size_cache
-                    self.dc = wx.BufferedDC(wx.WindowDC(self.window))
 
                     i_w, i_h = image.GetSize()
                     i_w, i_h = CommonUtils.CalculateNewSizeWithSameRatio((i_w, i_h), w * 0.7 / i_w)
@@ -274,27 +302,29 @@ class WorkplaceWorkingStatusThread(threading.Thread):
                     bitmap = image.ConvertToBitmap()
                     b_pos = (math.ceil((w - i_w) / 2), math.ceil((h * 0.9 - i_h) / 2))
                     # 绘制边框
-                    self.dc.SetPen(wx.Pen(configs.COLOR_COMMON_GREEN, int(w / 40 + h / 80)))
-                    self.dc.DrawRoundedRectangle(0, 0, w, h, 0)
+                    dc.SetPen(wx.Pen(configs.COLOR_COMMON_GREEN, int(w / 40 + h / 80)))
+                    dc.DrawRoundedRectangle(0, 0, w, h, 0)
                     # 绘制小图标
-                    self.dc.DrawBitmap(bitmap, b_pos, bitmap.GetMask() is not None)
+                    dc.DrawBitmap(bitmap, b_pos, bitmap.GetMask() is not None)
 
                     # 绘制文字
                     font_temp = self.window.GetFont()
                     font_temp.SetWeight(wx.FONTWEIGHT_BOLD)
                     font_temp.SetPointSize(int(w / 30 + h / 40) + 1)
-                    self.dc.SetTextForeground(configs.COLOR_COMMON_GREEN)
-                    self.dc.SetFont(font_temp)
-                    tw, th = self.dc.GetTextExtent(self.message)
+                    dc.SetTextForeground(configs.COLOR_COMMON_GREEN)
+                    dc.SetFont(font_temp)
+                    self.update_message()
+                    tw, th = dc.GetTextExtent(self.message)
                     t_y = h - th - math.fabs((h - w) / 3) - 2
-                    self.dc.DrawText(self.message, (w - tw) // 2, t_y)
+                    dc.DrawText(self.message, (w - tw) // 2, t_y)
 
                     self.angle += self.angle_span
                     self.event.wait(0.03)
+                except Exception as e:
+                    print("IconRotate -> e: ", e)
+                    traceback.print_exc()
                 finally:
-                    if self.dc is not None:
-                        self.dc = None
-
+                    del dc
 
         def reset_angle(self):
             self.angle = 0
@@ -313,7 +343,6 @@ class WorkplaceWorkingDataThread(threading.Thread):
         self.event = threading.Event()
         self.window = window
         self.data_obj = data_obj
-        self.dc = None
 
         self.running = True
         self.size_cache = None
@@ -322,7 +351,16 @@ class WorkplaceWorkingDataThread(threading.Thread):
         print("thread<WorkplaceWorkingDataThread> running")
         self.running = True
         while self.running:
+            dc = wx.WindowDC(self.window)
             try:
+                w_h_difference = self.window.w_h_difference
+                horizontal_indent = self.window.horizontal_indent
+                vertical_indent = self.window.vertical_indent
+                # 如果标题文字的大小还是空的，说明标题栏还没有绘制完毕，则暂时跳过，直到标题绘制完毕后再绘制数据
+                if self.window.title_text_size is None:
+                    continue
+                title_w, title_h = self.window.title_text_size
+
                 # 获取实时数据
                 torque = str(round(self.data_obj.torque, 2))
                 angle = str(self.data_obj.angle)
@@ -331,65 +369,40 @@ class WorkplaceWorkingDataThread(threading.Thread):
                     self.size_cache = self.window.GetSize()
                 w, h = self.size_cache
 
-                self.dc = wx.BufferedDC(wx.WindowDC(self.window))
-                self.dc.Clear()
-                torque_title = "扭矩（N*m)"
-                angle_title = "角度（°）"
-
                 # 获取字体
                 font_temp = self.window.GetFont()
                 font_temp.SetWeight(wx.FONTWEIGHT_BOLD)
-                self.dc.SetTextForeground(configs.COLOR_TEXT_BLACK)
-
-                # 水平、垂直缩进
-                w_h_difference = math.ceil((h - w) / 50)
-                horizontal_indent = math.ceil(w / 50)
-                vertical_indent = math.ceil(h / 40) + w_h_difference
-
-                # 扭矩标题的字体大小
-                font_temp.SetPointSize(int(w / 30 + h / 25) + 1)
-                self.dc.SetFont(font_temp)
-                torque_title_w, torque_title_h = self.dc.GetTextExtent(torque_title)
-                # 标题size、pos、背景颜色
-                self.dc.SetPen(wx.Pen(configs.COLOR_WORKPLACE_BLOCK_TITLE_BACKGROUND))
-                self.dc.SetBrush(wx.Brush(configs.COLOR_WORKPLACE_BLOCK_TITLE_BACKGROUND))
-                self.dc.DrawRoundedRectangle(0, 0, w, torque_title_h + vertical_indent * 2, 0)
-                # 绘制完背景再绘制扭矩标题
-                self.dc.DrawText(torque_title, horizontal_indent, vertical_indent)
+                dc.SetTextForeground(configs.COLOR_TEXT_BLACK)
 
                 # 绘制扭矩实时数据
-                font_temp.SetPointSize(int(w / 27 + h / 6.3) + w_h_difference)
-                self.dc.SetFont(font_temp)
-                torque_w, torque_h = self.dc.GetTextExtent(torque)
-                self.dc.DrawText(torque, w - torque_w - horizontal_indent, torque_title_h + vertical_indent * 2)
-
-                # 扭矩标题的字体大小
-                font_temp.SetPointSize(int(w / 30 + h / 25) + 1)
-                self.dc.SetFont(font_temp)
-                angle_title_w, angle_title_h = self.dc.GetTextExtent(angle_title)
-                # 标题size、pos、背景颜色
-                self.dc.SetPen(wx.Pen(configs.COLOR_WORKPLACE_BLOCK_TITLE_BACKGROUND))
-                self.dc.SetBrush(wx.Brush(configs.COLOR_WORKPLACE_BLOCK_TITLE_BACKGROUND))
-                self.dc.DrawRoundedRectangle(0, torque_title_h + torque_h + vertical_indent * 2, w, angle_title_h + vertical_indent * 2, 0)
-                # 绘制完背景再绘制角度标题
-                self.dc.DrawText(angle_title, horizontal_indent, torque_title_h + torque_h + vertical_indent * 3)
+                font_temp.SetPointSize(self.window.torque_font_size)
+                dc.SetFont(font_temp)
+                torque_w, torque_h = dc.GetTextExtent(torque)
+                dc.DrawText(torque,
+                            x = w - torque_w - horizontal_indent,
+                            y = title_h + vertical_indent * 2 + w_h_difference)
 
                 # 绘制角度实时数据
-                font_temp.SetPointSize(int(w / 48 + h / 9.2) + w_h_difference)
-                self.dc.SetFont(font_temp)
-                angle_w, angle_h = self.dc.GetTextExtent(angle)
-                self.dc.DrawText(angle, w - angle_w - horizontal_indent, torque_title_h + torque_h + angle_title_h + vertical_indent * 4)
+                font_temp.SetPointSize(self.window.angle_font_size)
+                dc.SetFont(font_temp)
+                angle_w, angle_h = dc.GetTextExtent(angle)
+                dc.DrawText(angle,
+                            x = w - angle_w - horizontal_indent,
+                            y = title_h * 2 + torque_h + vertical_indent * 5 + w_h_difference)
 
                 # 背景设为透明（不遮挡其它已经绘制好的信息）
-                self.dc.SetBrush(wx.TRANSPARENT_BRUSH)
+                dc.SetBrush(wx.TRANSPARENT_BRUSH)
                 # 将原来的框画回去
-                self.dc.SetPen(wx.Pen(self.window.border_color, self.window.border_thickness))
-                self.dc.DrawRoundedRectangle(0, 0, w, h, self.window.radius)
+                dc.SetPen(wx.Pen(self.window.border_color, self.window.border_thickness))
+                dc.DrawRoundedRectangle(0, 0, w, h, self.window.radius)
 
                 self.event.wait(0.1)
+            except Exception as e:
+                print("WorkplaceWorkingDataThread -> e: ", e)
+                traceback.print_exc()
             finally:
-                if self.dc is not None:
-                    self.dc = None
+                del dc
+
 
     def stop(self):
         self.running = False

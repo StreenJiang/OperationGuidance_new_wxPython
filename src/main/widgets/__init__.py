@@ -330,20 +330,20 @@ class CustomRadiusButton(buttons.GenBitmapButton):
         self.button_size_type = button_size_type
         self.radius = radius
         self.button_type = button_type
+        self.focusing = False
+        self.is_key_down = False
 
         self.SetBezelWidth(0)
         self.SetUseFocusIndicator(False)
-        self.SetBitmapLabel(self.createBitMap(label, self.font_color, self.background_color, None, radius))
+        self.SetBitmapLabel(self.createBitMap(self.background_color, None))
         self.SetBackgroundColour(self.GetParent().GetBackgroundColour())
 
-        self.focused = False
-        self.is_key_down = False
         self.Bind(wx.EVT_ENTER_WINDOW, self.on_enter)
         self.Bind(wx.EVT_LEAVE_WINDOW, self.on_leave)
 
     def set_custom_font(self, button_size_type):
         self.button_size_type = button_size_type
-        self.SetBitmapLabel(self.createBitMap(self.label, self.font_color, self.background_color, None, self.radius))
+        self.SetBitmapLabel(self.createBitMap(self.background_color, None))
 
     def OnSize(self, event):
         if self.is_key_down:
@@ -360,37 +360,37 @@ class CustomRadiusButton(buttons.GenBitmapButton):
 
     def on_enter(self, event):
         if self.button_type == BUTTON_TYPE_NORMAL:
-            if not self.focused:
-                self.SetBitmapLabel(self.createBitMap(self.label, self.font_color, self.background_color, self.focused_alpha, self.radius))
+            if not self.focusing:
+                self.focusing = True
+                self.SetBitmapLabel(self.createBitMap(self.background_color, self.focused_alpha))
                 self.Refresh()
-                self.focused = True
         elif self.button_type == BUTTON_TYPE_SWITCH:
-            if not self.focused:
+            if not self.focusing:
+                self.focusing = True
                 if not self.is_key_down:
-                    self.SetBitmapLabel(self.createBitMap(self.label, self.font_color, self.background_color, self.focused_alpha, self.radius))
+                    self.SetBitmapLabel(self.createBitMap(self.background_color, self.focused_alpha))
                 else:
-                    self.SetBitmapLabel(self.createBitMap(self.label, self.font_color, self.clicked_color, self.focused_alpha, self.radius))
+                    self.SetBitmapLabel(self.createBitMap(self.clicked_color, self.focused_alpha))
                 self.Refresh()
-                self.focused = True
         event.Skip()
 
     def on_leave(self, event):
         if self.button_type == BUTTON_TYPE_NORMAL:
-            self.SetBitmapLabel(self.createBitMap(self.label, self.font_color, self.background_color, None, self.radius))
+            self.SetBitmapLabel(self.createBitMap(self.background_color, None))
         elif self.button_type == BUTTON_TYPE_SWITCH:
             if self.is_key_down:
-                self.SetBitmapLabel(self.createBitMap(self.label, self.font_color, self.clicked_color, None, self.radius))
+                self.SetBitmapLabel(self.createBitMap(self.clicked_color, None))
             else:
-                self.SetBitmapLabel(self.createBitMap(self.label, self.font_color, self.background_color, None, self.radius))
+                self.SetBitmapLabel(self.createBitMap(self.background_color, None))
         self.Refresh()
-        self.focused = False
+        self.focusing = False
         event.Skip()
 
     def OnLeftDown(self, event):
         if not self.is_key_down:
-            self.SetBitmapLabel(self.createBitMap(self.label, self.font_color, self.clicked_color, None, self.radius))
+            self.SetBitmapLabel(self.createBitMap(self.clicked_color, None))
         else:
-            self.SetBitmapLabel(self.createBitMap(self.label, self.font_color, self.background_color, None, self.radius))
+            self.SetBitmapLabel(self.createBitMap(self.background_color, None))
 
         # buttons.GenBitmapButton.OnLeftDown(self, event)
         if (not self.IsEnabled()) or self.HasCapture():
@@ -408,17 +408,18 @@ class CustomRadiusButton(buttons.GenBitmapButton):
     def OnLeftUp(self, event):
         if self.button_type == BUTTON_TYPE_NORMAL:
             self.is_key_down = False
-            if self.focused:
-                self.SetBitmapLabel(self.createBitMap(self.label, self.font_color, self.background_color, self.focused_alpha, self.radius))
+            if self.focusing:
+                self.SetBitmapLabel(self.createBitMap(self.background_color, self.focused_alpha))
             else:
-                self.SetBitmapLabel(self.createBitMap(self.label, self.font_color, self.background_color, None, self.radius))
+                self.SetBitmapLabel(self.createBitMap(self.background_color, None))
         elif self.button_type == BUTTON_TYPE_SWITCH:
             pass
         super().OnLeftUp(event)
 
     # 画bitmap
-    def createBitMap(self, label, font_color, background_color, focused_alpha, radius):
+    def createBitMap(self, background_color, focused_alpha):
         width, height = self.GetSize()
+        label, font_color, radius = self.label, self.font_color, self.radius
         bitmap = wx.Bitmap(width, height, depth = 32)
 
         dc = wx.MemoryDC(bitmap)
@@ -445,7 +446,8 @@ class CustomRadiusButton(buttons.GenBitmapButton):
             font_temp.SetPointSize(int(w / 12 + h / 5) + 1)
         dc.SetFont(font_temp)
         tw, th = dc.GetTextExtent(label)
-        dc.DrawText(label, (w - tw) // 2, (h - th) // 2 - th / 25)
+        tx, ty = (w - tw) // 2, (h - th) // 2 - th / 25
+        dc.DrawText(label, tx, ty)
         # 删除DC
         del dc
 

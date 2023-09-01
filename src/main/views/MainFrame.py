@@ -273,8 +273,11 @@ class MainFrame(wx.Frame):
 
     def resize_after(self):
         # 稍稍滞后，效果看起来更好
-        print("main_frame_on_size, Resolution: ", self.GetClientSize())
-        self.main_panel.SetSize(self.GetClientSize())  # hide之后再show不知道为啥不跟着self一起变了，直接设置吧
+        size = self.GetClientSize()
+        print("main_frame_on_size, Resolution: ", size)
+        if size == (0, 0):
+            return
+        self.main_panel.SetSize(size)  # hide之后再show不知道为啥不跟着self一起变了，直接设置吧
         self.main_panel.Layout()
         self.main_panel.Thaw()
         self.main_panel.Refresh()

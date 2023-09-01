@@ -44,8 +44,10 @@ class ProductMission(BaseEntity):
         self.__mission_indexs = mission_indexs                  # 当前正在进行操作的产品面/孔位的indexs
         CommonUtils.CheckArgumentType(mission_product_sides, list)
         for side in mission_product_sides:
-            CommonUtils.CheckArgumentType(side, ProductSides)
+            CommonUtils.CheckArgumentType(side, ProductSide)
         self.__mission_product_sides = mission_product_sides    # 产品面list
+        # 临时变量，用于一些变量切换前的中间状态/值等
+        self.mission_status_temp = None
 
     def SetId(self, id: int):
         self.__id = id
@@ -55,12 +57,13 @@ class ProductMission(BaseEntity):
         self.__mission_pn_code = mission_pn_code
     def SetMissionStatus(self, mission_status: int):
         self.__mission_status = mission_status
+        self.mission_status_temp = None
     def SetMissionIndexs(self, mission_indexs: list):
         self.__mission_indexs = mission_indexs
     def SetMissionProductSides(self, mission_product_sides: list):
         CommonUtils.CheckArgumentType(mission_product_sides, list)
         for side in mission_product_sides:
-            CommonUtils.CheckArgumentType(side, ProductSides)
+            CommonUtils.CheckArgumentType(side, ProductSide)
         self.__mission_product_sides = mission_product_sides
 
     def GetID(self) -> int:
@@ -118,7 +121,7 @@ class ProductImage(BaseEntity):
         return self.__image_relative_position
 
 # 产品面实体，子类之一
-class ProductSides(BaseEntity):
+class ProductSide(BaseEntity):
     def __init__(self,
                  id: int,
                  side_name: str,
@@ -136,7 +139,7 @@ class ProductSides(BaseEntity):
 
         CommonUtils.CheckArgumentType(bolts, list)
         for bolt in bolts:
-            CommonUtils.CheckArgumentType(bolt, ProductBolts)
+            CommonUtils.CheckArgumentType(bolt, ProductBolt)
         self.__bolts = bolts            # 螺栓点位list
 
     def SetId(self, id: int):
@@ -148,7 +151,7 @@ class ProductSides(BaseEntity):
     def SetBolts(self, bolts: list):
         CommonUtils.CheckArgumentType(bolts, list)
         for bolt in bolts:
-            CommonUtils.CheckArgumentType(bolt, ProductBolts)
+            CommonUtils.CheckArgumentType(bolt, ProductBolt)
         self.__bolts = bolts
 
     def GetID(self) -> int:
@@ -162,11 +165,11 @@ class ProductSides(BaseEntity):
 
 
 # 螺栓点位实体，是子类之一，并且是子类[产品面]的子类
-class ProductBolts(BaseEntity):
+class ProductBolt(BaseEntity):
     def __init__(self,
                  id: int,
                  bolt_name: str,
-                 bolt_position: tuple,
+                 bolt_position: list,
                  bolt_status: int,
                  creator: str,
                  last_updater: str,
@@ -178,21 +181,24 @@ class ProductBolts(BaseEntity):
         self.__bolt_name = bolt_name            # 螺栓点位名称
         self.__bolt_position = bolt_position    # 螺栓点位坐标
         self.__bolt_status = bolt_status        # 螺栓点位状态（是不是放着还待定，如果放的话，应该考虑每个实体都加状态）
+        # 临时变量，用于一些变量切换前的中间状态/值等
+        self.bolt_status_temp = None
 
     def SetId(self, id: int):
         self.__id = id
     def SetBoltName(self, bolt_name: str):
         self.__bolt_name = bolt_name
-    def SetBoltPosition(self, bolt_position: tuple):
+    def SetBoltPosition(self, bolt_position: list):
         self.__bolt_position = bolt_position
     def SetBoltStatus(self, bolt_status: str):
         self.__bolt_status = bolt_status
+        self.bolt_status_temp = None
 
     def GetID(self) -> int:
         return self.__id
     def GetSBoltName(self) -> str:
         return self.__bolt_name
-    def GetBoltPosition(self) -> tuple:
+    def GetBoltPosition(self) -> list:
         return self.__bolt_position
     def GetBoltStatus(self) -> int:
         return self.__bolt_status
@@ -202,7 +208,7 @@ class ProductBolts(BaseEntity):
 class RealtimeData:
     def __init__(self,
                  mission_id: int,
-                 mission_indexs: tuple):
+                 mission_indexs: list):
         self.mission_id = mission_id
         self.mission_indexs = mission_indexs
         self.torque = 0.0
