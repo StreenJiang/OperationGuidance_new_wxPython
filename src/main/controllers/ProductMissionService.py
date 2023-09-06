@@ -1,6 +1,6 @@
 from PIL import Image
 
-import src.main.models.ProductMission as pdctmsn
+import models.ProductMission as pdctmsn
 
 
 # 获取任务（产品）列表

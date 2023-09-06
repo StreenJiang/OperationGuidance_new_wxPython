@@ -1,7 +1,7 @@
 import wx
 
 from win32api import GetSystemMetrics
-from src.main.views.Test_Frame import MainProgram
+from views.Test_Frame import MainProgram
 
 
 # 主循环

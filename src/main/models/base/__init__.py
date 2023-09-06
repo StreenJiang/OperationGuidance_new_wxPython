@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-import src.main.utils.CommonUtils as CommonUtils
+import utils.CommonUtils as CommonUtils
 
 
 class ToolBaseEntity(ABC):

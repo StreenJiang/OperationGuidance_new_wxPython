@@ -3,11 +3,11 @@ import threading
 import socket
 import time
 
-from src.main.enums.Command_Type_Enum import CommandTypeEnum
-from src.main.enums.Notice_Enum import NoticeEnum
-from src.main.enums.Operation_Enum import OperationEnum
-from src.main.models.Command import Command
-import src.main.utils.CommonUtils as CommonUtils
+from enums.Command_Type_Enum import CommandTypeEnum
+from enums.Notice_Enum import NoticeEnum
+from enums.Operation_Enum import OperationEnum
+from models.Command import Command
+import utils.CommonUtils as CommonUtils
 
 
 # --------------------

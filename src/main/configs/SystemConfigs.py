@@ -1,8 +1,8 @@
 import wx
 
-from src.main import widgets
-from src.main.controllers import apis, call_backs
-from src.main.views.Product_Mission_View import ProductMissionView
+import widgets
+from controllers import apis, call_backs
+from views.Product_Mission_View import ProductMissionView
 
 # 系统菜单列表
 main_menus_config = [

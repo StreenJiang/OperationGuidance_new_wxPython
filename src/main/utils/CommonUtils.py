@@ -2,7 +2,7 @@ import datetime
 import wx
 from PIL import Image
 
-from src.main.exceptions.Custom_Exception import ArgumentTypeException
+from exceptions.Custom_Exception import ArgumentTypeException
 
 
 def CheckNone(obj, error_msg):

@@ -1,12 +1,14 @@
 import math
+import string
+import time
 
 import wx
 import wx.lib.buttons as buttons
 from PIL import ImageColor
 
-import src.main.configs as configs
-from src.main.exceptions.Custom_Exception import LengthTooLongException
-from src.main.utils import CommonUtils
+import configs
+from exceptions.Custom_Exception import LengthTooLongException
+from utils import CommonUtils
 
 
 # CustomGenBitmapTextToggleButton： custom_style
@@ -446,7 +448,7 @@ class CustomRadiusButton(buttons.GenBitmapButton):
             font_temp.SetPointSize(int(w / 12 + h / 5) + 1)
         dc.SetFont(font_temp)
         tw, th = dc.GetTextExtent(label)
-        tx, ty = (w - tw) // 2, (h - th) // 2 - th / 25
+        tx, ty = (w - tw) // 2, math.ceil((h - th) / 2 - th / 20)
         dc.DrawText(label, tx, ty)
         # 删除DC
         del dc
@@ -617,4 +619,277 @@ class CustomViewPanel(wx.Panel):
 
     def GetMargin(self):
         return self.margin
+
+
+# 通用的弹出型窗口组件
+class CustomPopupWindow(wx.PopupTransientWindow):
+    # 为了提速暂时不做有右上方按钮的弹出窗，以后有需要再做
+    # PATH_MINIMIZE_BUTTON    = "configs/icons/button_minimize.png"
+    # PATH_MAXIMIZE_BUTTON    = "configs/icons/button_maximize.png"
+    # PATH_RESTORE_BUTTON     = "configs/icons/button_restore.png"
+    # PATH_CLOSE_BUTTON       = "configs/icons/button_close.png"
+
+    def __init__(self, parent: wx.Window,
+                 title = "",
+                 border_color = configs.COLOR_SYSTEM_BACKGROUND,
+                 background_color = configs.COLOR_SYSTEM_BACKGROUND):
+        wx.PopupTransientWindow.__init__(self, parent)
+        self.title = title
+        self.border_color = border_color
+        self.background_color = background_color
+        self.shadow_thickness = 4
+        self.buttons = []
+        self.size_cache = None
+        self.indent = 0
+        self.top_y = 0
+        self.Bind(wx.EVT_SHOW, self.on_show)
+        self.Bind(wx.EVT_SIZE, self.on_size)
+        self.Bind(wx.EVT_PAINT, self.on_paint)
+        self.Bind(wx.EVT_ERASE_BACKGROUND, lambda e: None)
+
+    def add_button(self, label, event_handler = None):
+        button = CustomRadiusButton(self, wx.ID_ANY,
+                                    label = label,
+                                    font_color = configs.COLOR_BUTTON_TEXT,
+                                    background_color = configs.COLOR_BUTTON_BACKGROUND,
+                                    clicked_color = configs.COLOR_BUTTON_FOCUSED,
+                                    radius = 2)
+        if event_handler is not None:
+            button.Bind(wx.EVT_LEFT_UP, event_handler)
+        self.buttons.append(button)
+
+    def on_show(self, event):
+        self.center_on_parent()
+        event.Skip()
+
+    def on_size(self, event):
+        w, h = self.GetSize()
+
+        # 若果没有缓存的size或者主窗体size有改变，则赋值
+        if self.size_cache is None or self.GetSize() != self.size_cache:
+            self.size_cache = w + self.shadow_thickness, h + self.shadow_thickness
+            self.size_cache = self.size_cache
+            w, h = self.size_cache
+            self.indent = int(w / 70 + h / 20)
+            self.SetSize(self.size_cache)
+            # 如果有按钮
+            buttons_len = len(self.buttons)
+            if buttons_len:
+                # 计算button的size和pos
+                b_w, b_h = self.calc_button_size()
+                # 计算button之间的v_gap和button的h_gap
+                v_gap = w // 25
+                h_gap = self.indent
+                # 计算第一个button的起始pos
+                b_x_first = (w - b_w * buttons_len - v_gap * (buttons_len - 1)) // 2
+                b_y = h - b_h - h_gap
+                for index in range(buttons_len):
+                    button = self.buttons[index]
+                    button.SetSize(b_w, b_h)
+                    button.SetPosition((b_x_first + (b_w + v_gap) * index, b_y))
+                    button.Refresh()
+
+        event.Skip()
+
+    def on_paint(self, event):
+        dc = wx.GCDC(wx.PaintDC(self))
+        shadow_thickness = self.shadow_thickness
+        w, h = self.GetSize()
+
+        # 设置画笔、画刷的颜色
+        pen = wx.Pen(self.border_color, 1)
+        dc.SetPen(pen)
+        brush = wx.Brush(self.background_color)
+        dc.SetBrush(brush)
+
+        # 画出bitmap的形状
+        dc.DrawRoundedRectangle(0, 0, w - shadow_thickness, h - shadow_thickness, 0)
+
+        shadow_w, shadow_h = w - shadow_thickness, h - shadow_thickness
+        for i in range(shadow_thickness):
+            dc.SetPen(wx.Pen(wx.Colour(0, 0, 0, 255 / 4 + (1 - 255 / 4) * (i + 1) / shadow_thickness), 1))
+            dc.DrawLine((i, shadow_h + i), (shadow_w + i, shadow_h + i))
+            dc.DrawLine((shadow_w + i, i), (shadow_w + i, shadow_h + i - 1))
+
+        # 绘制标题
+        if self.title is not None and self.title != "":
+            font_temp = self.GetFont()
+            font_temp.SetPointSize(int(w / 90 + h / 25) + 1)
+            dc.SetFont(font_temp)
+            dc.DrawText(self.title, self.indent, self.indent * 0.8)
+
+        # 绘制分割线
+        line_len = w - self.indent * 2
+        line_height = self.indent * 0.8
+        if self.title is not None and self.title != "":
+            line_height += dc.GetTextExtent(self.title)[1] * 1.2
+        dc.SetPen(wx.Pen(configs.COLOR_COMMON_DDDDDD, 1))
+        dc.DrawLine(self.indent, line_height, line_len + self.indent, line_height)
+
+        del dc
+        event.Skip()
+
+    def GetFont(self) -> wx.Font:
+        return super().GetFont()
+
+    def center_on_parent(self):
+        p_x, p_y = self.GetParent().GetPosition()
+        p_w, p_h = self.GetParent().GetSize()
+        w, h = self.GetSize()
+        self.SetPosition((p_x + p_w // 2 - w // 2, p_y + p_h // 2 - h // 2))
+        # self.Refresh()
+
+    def calc_button_size(self):
+        p_w, p_h = self.GetParent().GetSize()
+        b_h = math.ceil(p_h / 32)
+        b_w = b_h * 2.5
+        return b_w, b_h
+
+
+# 自定义TextCtrl组件
+class CustomTextCtrl(wx.Control):
+    def __init__(self, parent, id = wx.ID_ANY, pos = wx.DefaultPosition,
+                 size = wx.DefaultSize, style = 0, validator = wx.DefaultValidator,
+                 name = "CustomTextCtrl", hint = ""):
+        wx.Control.__init__(self, parent, id, pos, size, style, validator, name)
+        self.text_control = wx.TextCtrl(self, style = wx.BORDER_NONE, validator = validator)
+        self.text_control.SetHint(hint)
+        self.indent = 0
+        self.Bind(wx.EVT_SIZE, self.on_size)
+        self.Bind(wx.EVT_PAINT, self.on_paint)
+
+    def on_size(self, event):
+        w, h = self.GetSize()
+        self.indent = h // 10
+        font_temp = self.text_control.GetFont()
+        font_temp.SetPointSize(self.calc_font_size(h))
+        self.text_control.SetFont(font_temp)
+        self.text_control.SetSize(w - 2 - self.indent * 2, h - 2 - self.indent * 2)
+        self.text_control.SetPosition((1 + self.indent, 1 + self.indent))
+        event.Skip()
+
+    def on_paint(self, event):
+        dc = wx.GCDC(wx.PaintDC(self))
+        w, h = self.GetSize()
+
+        dc.SetPen(wx.Pen(configs.COLOR_COMMON_DDDDDD, 1))
+        dc.DrawRoundedRectangle(0, 0, w, h, 0)
+
+        del dc
+        event.Skip()
+
+    def calc_font_size(self, h):
+        return math.floor(math.ceil(h / 2.7) + 0.4)
+
+    def GetValue(self):
+        return self.text_control.GetValue()
+
+    def DiscardEdits(self):
+        self.text_control.DiscardEdits()
+
+    def EmulateKeyPress(self, event):
+        self.text_control.EmulateKeyPress(event)
+
+    def flush(self):
+        self.text_control.flush()
+
+    def GetDefaultStyle(self):
+        self.text_control.GetDefaultStyle()
+
+    def GetLineLength(self, lineNo):
+        self.text_control.GetLineLength(lineNo)
+
+    def GetLineText(self, lineNo):
+        return self.text_control.GetLineText(lineNo)
+
+    def GetNumberOfLines(self):
+        self.text_control.GetNumberOfLines()
+
+    def GetStyle(self, position, style):
+        return self.text_control.GetStyle(position, style)
+
+    def HideNativeCaret(self):
+        return self.text_control.HideNativeCaret()
+
+    def HitTestPos(self, pt):
+        self.text_control.HitTestPos(pt)
+
+    def IsModified(self):
+        return self.text_control.IsModified()
+
+    def IsMultiLine(self):
+        return self.text_control.IsMultiLine()
+
+    def IsSingleLine(self):
+        return self.text_control.IsSingleLine()
+
+    def LoadFile(self, *args, **kws):
+        return self.text_control.LoadFile(*args, **kws)
+
+    def MacCheckSpelling(self, check):
+        self.text_control.MacCheckSpelling(check)
+
+    def MarkDirty(self):
+        self.text_control.MarkDirty()
+
+    def OSXDisableAllSmartSubstitutions(self):
+        self.text_control.OSXDisableAllSmartSubstitutions()
+
+    def OSXEnableAutomaticDashSubstitution(self, enable):
+        self.text_control.OSXEnableAutomaticDashSubstitution(enable)
+
+    def OSXEnableAutomaticQuoteSubstitution(self, enable):
+        self.text_control.OSXEnableAutomaticQuoteSubstitution(enable)
+
+    def PositionToCoords(self, pos):
+        return self.text_control.PositionToCoords(pos)
+
+    def PositionToXY(self, pos):  # real signature unknown; restored from __doc__
+        self.text_control.PositionToXY(pos)
+
+    def SaveFile(self, *args, **kws):
+        return self.text_control.SaveFile(*args, **kws)
+
+    def SetDefaultStyle(self, style):
+        return self.text_control.SetDefaultStyle(style)
+
+    def SetModified(self, modified):
+        self.text_control.SetModified(modified)
+
+    def SetStyle(self, start, end, style):
+        return self.text_control.SetStyle(start, end, style)
+
+    def ShowNativeCaret(self, *args, **kws):
+        return self.text_control.ShowNativeCaret(*args, **kws)
+
+    def ShowPosition(self, pos):
+        self.text_control.ShowPosition(pos)
+
+    def write(self, text):
+        self.text_control.write(text)
+
+    def XYToPosition(self, x, y):
+        return self.text_control.XYToPosition(x, y)
+
+
+# 自定义数字validator
+class NumericalValidator(wx.Validator):
+    def __init__(self):
+        wx.Validator.__init__(self)
+        self.Bind(wx.EVT_CHAR, self.on_char)
+
+    # 一定需要有这个否则这个validator不生效
+    def Clone(self):
+        return NumericalValidator()
+
+    def on_char(self, event):
+        keycode = int(event.GetKeyCode())
+        if 0 < keycode < 256:
+            key = chr(keycode)
+            if key in string.ascii_letters:
+                return
+        else:
+            return
+        event.Skip()
+
 

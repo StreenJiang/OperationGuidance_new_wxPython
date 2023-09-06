@@ -3,7 +3,7 @@ import time
 import wx
 import wx.lib.agw.shapedbutton as sb
 
-from src.main.utils import CacheUtil
+from utils import CacheUtil
 
 if __name__ == '__main__':
     app = wx.App()

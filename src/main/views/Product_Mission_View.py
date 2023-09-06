@@ -2,12 +2,12 @@ import math
 
 import wx
 
-import src.main.widgets as widgets
-import src.main.configs as configs
-from src.main.controllers import ProductMissionService as productMissionService
-from src.main.utils import CommonUtils, CacheUtil
-from src.main.views.Content_Workplace import WorkplaceView
-from src.main.enums.Cache import CacheEnum as cache
+import widgets as widgets
+import configs
+from controllers import ProductMissionService as productMissionService
+from utils import CommonUtils, CacheUtil
+from views.Content_Workplace import WorkplaceView
+from enums.Cache import CacheEnum as cache
 
 
 # 任务列表展示界面的gridSizer的列数固定为4
@@ -291,6 +291,7 @@ class MissionBlock(widgets.CustomBorderPanel):
     # this fucking thing wasted me a whole day
     def on_panel_paint(self, event):
         dc = wx.GCDC(wx.PaintDC(self.panel))
+
         width, height = self.panel.GetSize()
         wx_image = self.mission_image.ConvertToImage()
         bw, bh = math.ceil(width / 10 * 8), math.ceil(height / 10 * 8)

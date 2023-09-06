@@ -1,4 +1,4 @@
-import src.main.models.Device as dvs
+import models.Device as dvs
 
 
 # 获取设备列表

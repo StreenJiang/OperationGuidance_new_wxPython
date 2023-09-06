@@ -3,9 +3,9 @@ import threading
 import math
 import traceback
 
-from src.main import configs, widgets
-import src.main.models.ProductMission as pdctmsn
-from src.main.utils import CommonUtils
+import configs, widgets
+import models.ProductMission as pdctmsn
+from utils import CommonUtils
 
 
 # 工作台操作界面右侧上方状态展示的线程
@@ -42,9 +42,13 @@ class WorkplaceWorkingStatusThread(threading.Thread):
                     if not self.handle_process():
                         break
                 elif mission_status == pdctmsn.STATUS_MISSION_DEFAULT:
+                    if len(self.child_threads) > 0:
+                        self.clear_thread()
                     self.handle_others("待机", configs.COLOR_SYSTEM_LOGO)
                     print("STATUS_MISSION_DEFAULT: waiting for any progress...")
                 elif mission_status == pdctmsn.STATUS_MISSION_READY:
+                    if len(self.child_threads) > 0:
+                        self.clear_thread()
                     self.handle_others("就绪", configs.COLOR_COMMON_GREEN)
 
                 self.event.wait(0.25)
@@ -53,7 +57,9 @@ class WorkplaceWorkingStatusThread(threading.Thread):
                 traceback.print_exc()
 
     def handle_others(self, status_text, background_color):
-        dc = wx.BufferedDC(wx.WindowDC(self.window), wx.Bitmap(self.window.GetSize()))
+        dc = None
+        if self.window:
+            dc = wx.BufferedDC(wx.WindowDC(self.window), wx.Bitmap(self.window.GetSize()))
         try:
             if self.size_cache is None or self.size_cache != self.window.GetSize():
                 self.size_cache = self.window.GetSize()
@@ -162,7 +168,9 @@ class WorkplaceWorkingStatusThread(threading.Thread):
             self.child_threads.clear()
 
     def handle_complete(self, operation_flag, indexs):
-        dc = wx.BufferedDC(wx.WindowDC(self.window))
+        dc = None
+        if self.window:
+            dc = wx.BufferedDC(wx.WindowDC(self.window))
         try:
             status_text = "OK"
             if self.size_cache is None or self.size_cache != self.window.GetSize():
@@ -205,7 +213,9 @@ class WorkplaceWorkingStatusThread(threading.Thread):
             del dc
 
     def handle_error(self, operation_flag, indexs):
-        dc = wx.BufferedDC(wx.WindowDC(self.window))
+        dc = None
+        if self.window:
+            dc = wx.BufferedDC(wx.WindowDC(self.window))
         try:
             status_text = "ERROR"
             if self.size_cache is None or self.size_cache != self.window.GetSize():
@@ -249,6 +259,7 @@ class WorkplaceWorkingStatusThread(threading.Thread):
 
     def stop(self):
         self.running = False
+        self.mission_obj.mission_status_temp = None
         self.clear_thread()
         print("thread<WorkplaceWorkingStatusThread> stopped")
 
@@ -280,58 +291,74 @@ class WorkplaceWorkingStatusThread(threading.Thread):
             print(f"thread<IconRotate: type = {self.thread_type}> rotating")
             self.running = True
             while self.running:
-                dc = wx.BufferedDC(wx.WindowDC(self.window))
-                try:
-                    image = self.icon_image.Copy()
+                print(f"thread<IconRotate: type = {self.thread_type}> running")
+                dc = None
+                if self.window:
+                    dc = wx.BufferedDC(wx.WindowDC(self.window))
+                    try:
+                        image = self.icon_image.Copy()
 
-                    # 如果界面有大小变化，则内容需要自适应调整
-                    if self.size_cache is None or self.size_cache != self.window.GetSize():
-                        self.size_cache = self.window.GetSize()
-                    w, h = self.size_cache
+                        # 如果界面有大小变化，则内容需要自适应调整
+                        if self.size_cache is None or self.size_cache != self.window.GetSize():
+                            self.size_cache = self.window.GetSize()
+                        w, h = self.size_cache
 
-                    i_w, i_h = image.GetSize()
-                    i_w, i_h = CommonUtils.CalculateNewSizeWithSameRatio((i_w, i_h), w * 0.7 / i_w)
-                    image = image.Rescale(i_w, i_h, wx.IMAGE_QUALITY_HIGH)
-                    # 旋转图片
-                    if self.clockwise:
-                        image = image.Rotate(-self.angle, (i_w / 2, i_h / 2))
-                    else:
-                        image = image.Rotate(self.angle, (i_w / 2, i_h / 2))
-                    # 需要重新获取尺寸，因为旋转了以后，长宽会因为旋转后斜边从45度变为了其他的角度，导致图片水平和垂直的尺寸有变化
-                    i_w, i_h = image.GetSize()
-                    bitmap = image.ConvertToBitmap()
-                    b_pos = (math.ceil((w - i_w) / 2), math.ceil((h * 0.9 - i_h) / 2))
-                    # 绘制边框
-                    dc.SetPen(wx.Pen(configs.COLOR_COMMON_GREEN, int(w / 40 + h / 80)))
-                    dc.DrawRoundedRectangle(0, 0, w, h, 0)
-                    # 绘制小图标
-                    dc.DrawBitmap(bitmap, b_pos, bitmap.GetMask() is not None)
+                        i_w, i_h = image.GetSize()
+                        i_w, i_h = CommonUtils.CalculateNewSizeWithSameRatio((i_w, i_h), w * 0.7 / i_w)
+                        image = image.Rescale(i_w, i_h, wx.IMAGE_QUALITY_HIGH)
+                        # 旋转图片
+                        if self.clockwise:
+                            image = image.Rotate(-self.angle, (i_w / 2, i_h / 2))
+                        else:
+                            image = image.Rotate(self.angle, (i_w / 2, i_h / 2))
+                        # 需要重新获取尺寸，因为旋转了以后，长宽会因为旋转后斜边从45度变为了其他的角度，导致图片水平和垂直的尺寸有变化
+                        i_w, i_h = image.GetSize()
+                        bitmap = image.ConvertToBitmap()
+                        b_pos = (math.ceil((w - i_w) / 2), math.ceil((h * 0.9 - i_h) / 2))
+                        # 绘制边框
+                        dc.SetPen(wx.Pen(configs.COLOR_COMMON_GREEN, int(w / 40 + h / 80)))
+                        dc.DrawRoundedRectangle(0, 0, w, h, 0)
+                        # 绘制小图标
+                        dc.DrawBitmap(bitmap, b_pos, bitmap.GetMask() is not None)
 
-                    # 绘制文字
-                    font_temp = self.window.GetFont()
-                    font_temp.SetWeight(wx.FONTWEIGHT_BOLD)
-                    font_temp.SetPointSize(int(w / 30 + h / 40) + 1)
-                    dc.SetTextForeground(configs.COLOR_COMMON_GREEN)
-                    dc.SetFont(font_temp)
-                    self.update_message()
-                    tw, th = dc.GetTextExtent(self.message)
-                    t_y = h - th - math.fabs((h - w) / 3) - 2
-                    dc.DrawText(self.message, (w - tw) // 2, t_y)
+                        # 绘制文字
+                        font_temp = self.window.GetFont()
+                        font_temp.SetWeight(wx.FONTWEIGHT_BOLD)
+                        font_temp.SetPointSize(int(w / 30 + h / 40) + 1)
+                        dc.SetTextForeground(configs.COLOR_COMMON_GREEN)
+                        dc.SetFont(font_temp)
+                        self.update_message()
+                        tw, th = dc.GetTextExtent(self.message)
+                        t_y = h - th - math.fabs((h - w) / 3) - 2
+                        dc.DrawText(self.message, (w - tw) // 2, t_y)
 
-                    self.angle += self.angle_span
-                    self.event.wait(0.03)
-                except Exception as e:
-                    print("IconRotate -> e: ", e)
-                    traceback.print_exc()
-                finally:
-                    del dc
+                        self.angle += self.angle_span
+                        self.event.wait(0.03)
+                    except Exception as e:
+                        print("IconRotate -> e: ", e)
+                        traceback.print_exc()
+                    finally:
+                        del dc
+                else:
+                    print("""
+                        wrapped C/C++ object of type RightTopPanel has been deletedthread<WorkplaceWorkingStatusThread> stopped
+                        
+                        Traceback (most recent call last):
+                        thread<WorkplaceWorkingDataThread> stopped  File "D:\Python\projets\OperationGuidance_new\src\main\threads\Workplace_threads.py", line 302, in run
+                            if self.size_cache is None or self.size_cache != self.window.GetSize():
+                        
+                        RuntimeError: wrapped C/C++ object of type RightTopPanel has been deleted
+                    """)
+            else:
+                print(f"thread<IconRotate: type = {self.thread_type}> already stopped")
 
         def reset_angle(self):
             self.angle = 0
 
         def stop(self):
-            self.running = False
             print(f"thread<IconRotate: type = {self.thread_type}> stopped")
+            self.running = False
+            # self.join()
 
 
 # 工作台操作界面右侧中间数据实时展示的线程
@@ -351,7 +378,9 @@ class WorkplaceWorkingDataThread(threading.Thread):
         print("thread<WorkplaceWorkingDataThread> running")
         self.running = True
         while self.running:
-            dc = wx.WindowDC(self.window)
+            dc = None
+            if self.window:
+                dc = wx.WindowDC(self.window)
             try:
                 w_h_difference = self.window.w_h_difference
                 horizontal_indent = self.window.horizontal_indent

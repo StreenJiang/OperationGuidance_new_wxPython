@@ -1,9 +1,8 @@
-import wx
-import win32api as win32
-from wx import Object
+import time
 
-import src.main.configs as configs
-from src.main.views.MainFrame import MainFrame
+import wx
+
+from views.MainFrame import MainFrame
 
 
 class MainApp(wx.App):
@@ -39,33 +38,25 @@ class MainApp(wx.App):
 
     # 检查程序是否重复启动
     def Check_program_is_duplicated(self):
+        import psutil
+        pids = psutil.pids()  # 获取所有进程PID
 
-        # import os
-        # import sys
-        #
-        # import psutil
-        # import tkinter
-        #
-        # from tkinter import messagebox
-        # from framework.base.BaseConfig import BaseConfig
-        # from framework.views.LoginView import LoginView
-        #
-        # if __name__ == '__main__':
-        #     pids = psutil.pids()  # 获取所有进程PID
-        #     list = []  # 空列表用来存储PID名称
-        #     for pid in pids:  # 遍历所有PID进程
-        #         p = psutil.Process(pid)  # 得到每个PID进程信息
-        #         list.append(p.name())  # 将PID名称放入列表
-        #         s = str(p.name())  # 将PID名称转换成字符串进行判断
-        #         if s == "Program.exe":  # “123.exe”你要防多开进程的名称
-        #             print(s + "当前程序已经被打开")
-        #             pidd = os.getpid()  # 获取当前PID名称
-        #             # root = tkinter.Tk().withdraw()
-        #             # messagebox.showwarning(title='提示', message='当前程序已经被打开')
-        #             # root.mainloop()
-        #             sys.exit()
-        #             # cmd = 'taskkill /pid ' + "pidd" + ' /f'  # 输入关闭名称命令
-        #
+        count = 0
+        for pid in pids:  # 遍历所有PID进程
+            try:
+                p = psutil.Process(pid)  # 得到每个PID进程信息
+                s = str(p.name())  # 将PID名称转换成字符串进行判断
+                if s == "ApplicationMain.exe":  # “123.exe”你要防多开进程的名称
+                    count += 1
+            except psutil.NoSuchProcess as e:
+                continue
+
+        print("count: ", count)
+        if count > 1:
+            dlg = wx.MessageDialog(None, "程序已在运行中", "提示", wx.OK | wx.ICON_WARNING)
+            result = dlg.ShowModal()
+            return True
+
         return False
 
 
@@ -91,6 +82,11 @@ class MainApp(wx.App):
     def Initialize_system_config(self):
         # 从存储在磁盘中的系统参数文件中读取数据，然后修改软件默认的系统参数
         pass
+
+    # def OnExit(self):
+    #     print("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz")
+    #     time.sleep(0.5)
+    #     return super().OnExit()
 
 
 if __name__ == '__main__':

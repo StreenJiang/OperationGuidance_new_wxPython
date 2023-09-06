@@ -1,8 +1,8 @@
 import wx
 from PIL import Image
 
-from src.main.models.base import BaseEntity
-import src.main.utils.CommonUtils as CommonUtils
+from models.base import BaseEntity
+import utils.CommonUtils as CommonUtils
 
 
 # 任务状态

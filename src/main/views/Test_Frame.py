@@ -19,11 +19,11 @@ import wx
 # ------------------------------
 # B02-导入自建模块
 # ------------------------------
-from src.main.enums.Command_Type_Enum import CommandTypeEnum
-from src.main.enums.Operation_Enum import OperationEnum
-from src.main.models.Command import Command
-from src.main.models.SudongEntity import SudongEntity
-from src.main.threads.ToolThread import ToolThread
+from enums.Command_Type_Enum import CommandTypeEnum
+from enums.Operation_Enum import OperationEnum
+from models.Command import Command
+from models.SudongEntity import SudongEntity
+from threads.ToolThread import ToolThread
 
 # ******************************
 # C01-主程序块

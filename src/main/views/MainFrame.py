@@ -1,12 +1,11 @@
+import wx
 import math
 
-import wx
-
-from src.main import widgets
-import src.main.configs as configs
-import src.main.controllers as controller
-from src.main.configs import SystemConfigs
-from src.main.utils import CommonUtils
+import widgets
+import configs
+import controllers
+from configs import SystemConfigs
+from utils import CommonUtils
 
 
 # 主窗体类
@@ -230,7 +229,7 @@ class MainFrame(wx.Frame):
                 self.current_main_menu = btn_panel_temp
 
             # 触发事件对象所绑定的事件
-            controller.call_api(event)
+            controllers.call_api(event)
         else:
             # 如果点的是已经激活的菜单，也要重新激活一下，因为toggle按钮组件底层SetToggle一定会被调用，toggle会被设置会False，所以要手动激活一下
             # 尝试过重写，SetToggle方法，但是会出现更奇怪的问题，所以就这样解决吧
@@ -256,7 +255,7 @@ class MainFrame(wx.Frame):
             btn_panel_temp.menu_content_panel.Show(True)
 
             # # 触发事件对象所绑定的事件
-            controller.call_api(event)
+            controllers.call_api(event)
 
             # 更新当前按钮对象
             self.current_main_menu.current_child_menu = btn_panel_temp
@@ -267,20 +266,28 @@ class MainFrame(wx.Frame):
 
     # 主窗口大小变化时，所有界面元素都需要调整
     def main_frame_on_size(self, event):
-        self.main_panel.Freeze()
-        wx.CallLater(100, self.resize_after)
+        # wx.CallLater(100, self.resize_after)
+        if not self.is_resizing:
+            self.is_resizing = True
+            size = self.GetClientSize()
+            print("main_frame_on_size, Resolution: ", size)
+            if size == (0, 0):
+                return
+            self.main_panel.SetSize(size)  # hide之后再show不知道为啥不跟着self一起变了，直接设置吧
+            self.main_panel.Layout()
+            self.main_panel.Refresh()
+            self.is_resizing = False
         event.Skip()
 
-    def resize_after(self):
-        # 稍稍滞后，效果看起来更好
-        size = self.GetClientSize()
-        print("main_frame_on_size, Resolution: ", size)
-        if size == (0, 0):
-            return
-        self.main_panel.SetSize(size)  # hide之后再show不知道为啥不跟着self一起变了，直接设置吧
-        self.main_panel.Layout()
-        self.main_panel.Thaw()
-        self.main_panel.Refresh()
+    # def resize_after(self):
+    #     # 稍稍滞后，效果看起来更好
+    #     size = self.GetClientSize()
+    #     print("main_frame_on_size, Resolution: ", size)
+    #     if size == (0, 0):
+    #         return
+    #     self.main_panel.SetSize(size)  # hide之后再show不知道为啥不跟着self一起变了，直接设置吧
+    #     self.main_panel.Layout()
+    #     self.main_panel.Refresh()
 
     # 窗体拖拽事件 - 重新定位窗体位置
     def window_dragging(self, event):
@@ -293,7 +300,7 @@ class MainFrame(wx.Frame):
                     self.SetPosition(self.GetPosition() + pos_changed)
 
                 # 触发事件对象所绑定的事件
-                controller.call_api(event)
+                controllers.call_api(event)
         event.Skip()
 
     # 窗体拖拽事件 - 鼠标左键按下
@@ -350,7 +357,12 @@ class MainMenuPanel(wx.Panel):
         event.Skip()
 
     def on_paint(self, event):
-        dc = wx.GCDC(wx.PaintDC(self))
+        # 使用缓冲DC，避免绘制的背景颜色被覆盖
+        dc = wx.BufferedPaintDC(self)
+
+        # 重新绘制背景颜色
+        dc.SetBrush(wx.Brush(configs.COLOR_MENU_BACKGROUND))
+        dc.Clear()
 
         # 重设logo的size和pos
         if self.logo_bitmap is not None:

@@ -1,5 +1,5 @@
-from src.main.models.base import BaseEntity
-from src.main.utils import CommonUtils
+from models.base import BaseEntity
+from utils import CommonUtils
 
 # 设备类别
 DEVICE_CATEGORY_TOOL = {

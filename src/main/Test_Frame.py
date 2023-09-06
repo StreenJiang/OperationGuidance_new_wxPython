@@ -1,8 +1,8 @@
 import wx
 
-from src.main import widgets, configs
-from src.main.configs import SystemConfigs
-from src.main.views.Content_Workplace import WorkplaceView
+import widgets, configs
+from configs import SystemConfigs
+from views.Content_Workplace import WorkplaceView
 
 
 class MyFrame(wx.Frame):

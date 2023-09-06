@@ -1,12 +1,12 @@
 import wx
 import math
 
-from src.main import configs, widgets
-from src.main.controllers import DeviceService as deviceService
-from src.main.models import Device as dvs, ProductMission as pdctmsn
-from src.main.threads import Workplace_threads as wThread
-from src.main.utils import CommonUtils, CacheUtil
-from src.main.enums.Cache import CacheEnum as cache
+import configs, widgets
+from controllers import DeviceService as deviceService
+from models import Device as dvs, ProductMission as pdctmsn
+from threads import Workplace_threads as wThread
+from utils import CommonUtils, CacheUtil
+from enums.Cache import CacheEnum as cache
 
 # 返回按钮的TEXT
 BACK_BUTTON_TEXT        = "返回"
@@ -189,11 +189,16 @@ class WorkplaceView(wx.Panel):
 
     # 主窗口大小变化时，所有界面元素都需要调整
     def main_frame_resizing(self, event):
+        # wx.CallLater(100, self.resize_after)
         if not self.is_resizing:
             self.is_resizing = True
-            self.Freeze()
-            wx.CallLater(100, self.resize_after)
-            event.Skip()
+            top_size = self.top_parent.GetClientSize()
+            print("workplace -> Resizing frame, Resolution: ", top_size)
+            if top_size == (0, 0):
+                return
+            self.SetSize(top_size)
+            self.is_resizing = False
+        event.Skip()
 
     def resize_after(self):
         top_size = self.top_parent.GetClientSize()
@@ -201,12 +206,9 @@ class WorkplaceView(wx.Panel):
         if top_size == (0, 0):
             return
         self.SetSize(top_size)
-        self.Thaw()
         self.is_resizing = False
 
     def on_size(self, event):
-        # 设置顶部菜单条大小和位置
-        self.top_menu_bar_panel.SetSize(self.GetSize())
         event.Skip()
 
     def on_show(self, event):
@@ -465,7 +467,7 @@ class ContentPanel(widgets.CustomBorderPanel):
     def add_middle_top(self):
         self.panel_middle_top = MiddleTopPanel(parent = self)
         self.panel_middle_top.set_icon(wx.Image(PATH_ICON_BAR_CODE, wx.BITMAP_TYPE_ANY).ConvertToBitmap())
-        self.panel_middle_top.add_text_control("点击或扫描录入条码信息")
+        self.panel_middle_top.add_text_control()
         return self.panel_middle_top
 
     def add_middle_bottom(self, mission_obj: pdctmsn.ProductMission):
@@ -789,12 +791,14 @@ class LeftPanel(widgets.CustomBorderPanel):
                 wx.PopupTransientWindow.__init__(self, parent)
                 self.background_color = background_color
                 self.border_color = border_color
+                self.shadow_thickness = 4 # 小组件阴影厚度
                 self.device_info_arr = []
                 self.size_cache = None
 
                 self.Bind(wx.EVT_SIZE, self.on_size)
                 self.Bind(wx.EVT_PAINT, self.on_paint)
                 self.Bind(wx.EVT_SHOW, self.on_show)
+                self.Bind(wx.EVT_ERASE_BACKGROUND, lambda e: None)
 
             def on_show(self, event):
                 self.GetParent().GetEventHandler().ProcessEvent(event)
@@ -808,6 +812,7 @@ class LeftPanel(widgets.CustomBorderPanel):
             def on_paint(self, event):
                 if self.device_info_arr:
                     dc = wx.GCDC(wx.PaintDC(self))
+                    shadow_thickness = self.shadow_thickness
 
                     info_len = len(self.device_info_arr)
                     if self.size_cache is None:
@@ -816,15 +821,6 @@ class LeftPanel(widgets.CustomBorderPanel):
                             "panel_size": None,
                             "size_pos_arr": None
                         }
-
-                        # 设置画笔、画刷的颜色
-                        pen = wx.Pen(self.border_color, 1)
-                        dc.SetPen(pen)
-                        brush = wx.Brush(self.background_color)
-                        dc.SetBrush(brush)
-
-                        # 画出bitmap的形状
-                        dc.DrawRoundedRectangle(0, 0, w, h, 0)
 
                         if info_len > 0:
                             h_info = math.ceil(h / info_len)
@@ -856,8 +852,6 @@ class LeftPanel(widgets.CustomBorderPanel):
                                 # 重新设置图片的尺寸
                                 size_pos["icon_size"] = (bw, bh) # 存入缓存
                                 image.Rescale(bw, bh, wx.IMAGE_QUALITY_HIGH)
-                                # 重新绘制bitmap
-                                bitmap = wx.Bitmap(image)
 
                                 # 计算并重设图片和文字的pos
                                 # 图标左侧的缩进
@@ -867,55 +861,60 @@ class LeftPanel(widgets.CustomBorderPanel):
                                 b_x = math.ceil((w - tw - bw - w_indent) / 4)
                                 b_y = math.ceil((h_info - bh) / 2) + (h_info - h_gap) * index
                                 size_pos["icon_pos"] = (b_x, b_y) # 存入缓存
-                                dc.DrawBitmap(bitmap, (b_x, b_y), bitmap.GetMask() is not None)
                                 t_x = b_x + bw + w_indent
                                 t_y = math.ceil((h_info - th) / 2 - math.ceil(th / 20)) + (h_info - h_gap) * index
                                 size_pos["text_pos"] = (t_x, t_y) # 存入缓存
-                                dc.DrawText(device_info, (t_x, t_y))
 
                                 self.size_cache["size_pos_arr"].append(size_pos)
 
                             # 将多余的高度去掉
-                            panel_size = (w, h - h_gap * (info_len - 1))
-                            self.size_cache["panel_size"] = (w, h - h_gap * (info_len - 1))
+                            panel_size = (w + shadow_thickness, h - h_gap * (info_len - 1) + shadow_thickness)
+                            self.size_cache["panel_size"] = panel_size
                             self.SetSize(panel_size)
-                    else:
-                        w, h = self.size_cache["panel_size"]
 
-                        # 设置画笔、画刷的颜色
-                        pen = wx.Pen(self.border_color, 1)
-                        dc.SetPen(pen)
-                        brush = wx.Brush(self.background_color)
-                        dc.SetBrush(brush)
+                    w, h = self.size_cache["panel_size"]
+                    # 设置画笔、画刷的颜色
+                    pen = wx.Pen(self.border_color, 1)
+                    dc.SetPen(pen)
+                    brush = wx.Brush(self.background_color)
+                    dc.SetBrush(brush)
 
-                        # 画出bitmap的形状
-                        dc.DrawRoundedRectangle(0, 0, w, h, 0)
+                    # 画出bitmap的形状
+                    dc.DrawRoundedRectangle(0, 0, w - shadow_thickness, h - shadow_thickness, 0)
 
-                        size_pos_arr = self.size_cache["size_pos_arr"]
-                        for index in range(info_len):
-                            info = self.device_info_arr[index]
+                    size_pos_arr = self.size_cache["size_pos_arr"]
+                    for index in range(info_len):
+                        info = self.device_info_arr[index]
 
-                            # 重设device信息的font_size
-                            device_info = info["ip"] + "-" + str(info["port"])
-                            dc.SetTextForeground(configs.COLOR_TEXT_BLACK)
-                            font_temp = self.GetFont()
-                            font_temp.SetPointSize(size_pos_arr[index]["font_size"])
-                            dc.SetFont(font_temp)
+                        # 重设device信息的font_size
+                        device_info = info["ip"] + "-" + str(info["port"])
+                        dc.SetTextForeground(configs.COLOR_TEXT_BLACK)
+                        font_temp = self.GetFont()
+                        font_temp.SetPointSize(size_pos_arr[index]["font_size"])
+                        dc.SetFont(font_temp)
 
-                            # 重设icon的size
-                            image = wx.Image(info["status_const"]["icon"], wx.BITMAP_TYPE_ANY)
-                            # 计算icon的size和pos
-                            bw, bh = size_pos_arr[index]["icon_size"]
-                            # 重新设置图片的尺寸
-                            image.Rescale(bw, bh, wx.IMAGE_QUALITY_HIGH)
-                            # 重新绘制bitmap
-                            bitmap = wx.Bitmap(image)
+                        # 重设icon的size
+                        image = wx.Image(info["status_const"]["icon"], wx.BITMAP_TYPE_ANY)
+                        # 计算icon的size和pos
+                        bw, bh = size_pos_arr[index]["icon_size"]
+                        # 重新设置图片的尺寸
+                        image.Rescale(bw, bh, wx.IMAGE_QUALITY_HIGH)
+                        # 重新绘制bitmap
+                        bitmap = wx.Bitmap(image)
 
-                            # 计算并重设图片和文字的pos
-                            b_x, b_y = size_pos_arr[index]["icon_pos"]
-                            dc.DrawBitmap(bitmap, (b_x, b_y), bitmap.GetMask() is not None)
-                            t_x, t_y = size_pos_arr[index]["text_pos"]
-                            dc.DrawText(device_info, (t_x, t_y))
+                        # 从缓存中取出icon和text的pos
+                        b_x, b_y = size_pos_arr[index]["icon_pos"]
+                        t_x, t_y = size_pos_arr[index]["text_pos"]
+                        # 重新绘制icon和pos
+                        dc.DrawBitmap(bitmap, (b_x, b_y), bitmap.GetMask() is not None)
+                        dc.DrawText(device_info, (t_x, t_y))
+
+                    w, h = self.size_cache["panel_size"]
+                    shadow_w, shadow_h = w - shadow_thickness, h - shadow_thickness
+                    for i in range(shadow_thickness):
+                        dc.SetPen(wx.Pen(wx.Colour(0, 0, 0, 255 / 4 + (1 - 255 / 4) * (i + 1) / shadow_thickness), 1))
+                        dc.DrawLine((i, shadow_h + i), (shadow_w + i, shadow_h + i))
+                        dc.DrawLine((shadow_w + i, i), (shadow_w + i, shadow_h + i - 1))
 
                     # 删除DC
                     del dc
@@ -959,9 +958,12 @@ class MiddleTopPanel(widgets.CustomBorderPanel):
         self.icon_bitmap = None
         self.icon_size = None
         self.icon_pos = None
+        self.text_content = "扫描录入或点击输入条码信息"
         self.text_control = None
+        self.popup_window = None
         self.default_value = None
         self.Bind(wx.EVT_PAINT, self.on_paint)
+        self.Bind(wx.EVT_LEFT_UP, self.on_left_up)
 
     def on_size(self, event):
         # 计算自身size和pos（在父panel计算过了)
@@ -980,6 +982,11 @@ class MiddleTopPanel(widgets.CustomBorderPanel):
         # 重设字体大小
         font_temp = self.calc_font_size(self.GetFont())
         self.text_control.SetFont(font_temp)
+
+        # 重设扫码弹出框size和pos
+        if self.popup_window is not None:
+            self.popup_window.SetSize(self.calc_popup_window())
+
         super().on_size(event)
 
     def on_paint(self, event):
@@ -999,12 +1006,22 @@ class MiddleTopPanel(widgets.CustomBorderPanel):
     def set_icon(self, bitmap):
         self.icon_bitmap = bitmap
 
-    def add_text_control(self, default_value):
-        self.default_value = default_value
-        self.text_control = wx.TextCtrl(self, value = default_value,
-                                        style = wx.BORDER_NONE)
+    def add_text_control(self):
+        self.text_control = wx.TextCtrl(self, value = self.text_content,
+                                        style = wx.BORDER_NONE | wx.TE_READONLY)
         self.text_control.SetForegroundColour(configs.COLOR_TEXT_CONTROL_FONT)
         self.text_control.SetBackgroundColour(configs.COLOR_TEXT_CONTROL_BACKGROUND)
+        self.text_control.Bind(wx.EVT_LEFT_UP, self.on_left_up)
+
+    def on_left_up(self, event):
+        if self.popup_window is None:
+            self.popup_window = self.InnerPopup(parent = self.GetTopLevelParent(),
+                                                title = "录入条码",
+                                                size = self.calc_popup_window(),
+                                                hint = self.text_content,
+                                                out_put_window = self.text_control)
+        self.popup_window.Show()
+        event.Skip()
 
     def calc_icon(self, image_size):
         w, h = self.GetSize()
@@ -1031,6 +1048,58 @@ class MiddleTopPanel(widgets.CustomBorderPanel):
         size = math.floor(math.ceil(h / 2.7) + 0.4)
         font_temp.SetPointSize(size)
         return font_temp
+
+    def calc_popup_window(self):
+        tp_w, tp_h = self.GetTopLevelParent().GetSize()
+        return tp_w // 1.7, tp_h // 4.5
+
+    # 弹框组件
+    class InnerPopup(widgets.CustomPopupWindow):
+        def __init__(self, parent, title, size, hint, out_put_window: wx.TextCtrl):
+            widgets.CustomPopupWindow.__init__(self, parent, title)
+            self.hint = hint
+            self.add_button("确定", self.on_confirm)
+            self.add_button("取消", self.on_cancel)
+
+            self.text_control = widgets.CustomTextCtrl(self, style = wx.BORDER_NONE, hint = hint, validator = widgets.NumericalValidator())
+            self.text_control.SetBackgroundColour(configs.COLOR_COMMON_WHITE)
+            # TODO: 得加一个键盘按回车的事件
+            self.out_put_window = out_put_window
+
+            self.SetSize(size)
+            self.Refresh()
+
+        def on_cancel(self, event):
+            self.Hide()
+            event.Skip()
+
+        def on_confirm(self, event):
+            self.Hide()
+            text = self.text_control.GetValue()
+            if text is not None and text != "":
+                self.out_put_window.SetValue(text)
+            else:
+                self.out_put_window.SetValue(self.hint)
+            event.Skip()
+
+        def on_size(self, event):
+            super().on_size(event)
+            w, h = self.GetSize()
+            text_control_size = self.calc_text_control_size(w, h)
+            self.text_control.SetSize(text_control_size)
+            self.text_control.SetPosition(self.calc_text_control_pos(h, text_control_size[1]))
+
+        def on_show(self, event):
+            super().on_show(event)
+            if not event.IsShown:
+                self.GetParent().Refresh()
+
+        def calc_text_control_size(self, w, h):
+            return w - self.indent * 2, h // 5
+
+        def calc_text_control_pos(self, h, text_control_h):
+            return self.indent, (h - text_control_h) // 2
+
 
 
 # 中间下方的产品展示、工作流程panel
@@ -1419,6 +1488,7 @@ class RightCenterPanel(widgets.CustomBorderPanel):
         self.angle_font_size = int(w / 50 + h / 8.5)
 
         super().on_size(event)
+        self.Refresh()
 
     def on_paint(self, event):
         w, h = self.GetSize()

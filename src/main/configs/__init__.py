@@ -13,6 +13,7 @@ PATH_LOGO_IMAGE                                         = "configs/icons/logo.pn
 COLOR_COMMON_GREEN                                      = "#2AB514"                 # 默认参数 - 颜色 - 通用绿色（成功、完成等）
 COLOR_COMMON_WHITE                                      = "#FEFEFE"                 # 默认参数 - 颜色 - 通用白色
 COLOR_COMMON_RED                                        = "#F01414"                 # 默认参数 - 颜色 - 通用红色（错误）
+COLOR_COMMON_DDDDDD                                     = "#DDDDDD"                 # 默认参数 - 颜色 - 通用淡灰色
 
 COLOR_SYSTEM_LOGO                                       = "#E86C10"                 # 默认参数 - 颜色 - logo颜色（主题色）
 COLOR_SYSTEM_BACKGROUND                                 = "#F0F0F0"                 # 默认参数 - 颜色 - 系统背景颜色
@@ -23,7 +24,7 @@ COLOR_CHILD_MENU_BUTTON_BACKGROUND                      = "#444444"             
 COLOR_MENU_BUTTON_TOGGLE                                = "#F0F0F0"                 # 默认参数 - 颜色 - 菜单按钮触发后的颜色
 
 COLOR_CONTENT_PANEL_BACKGROUND                          = "#F0F0F0"                 # 默认参数 - 颜色 - 内容主体界面的背景颜色
-COLOR_CONTENT_PANEL_INSIDE_BORDER                       = "#DDDDDD"                 # 默认参数 - 颜色 - 内容主体界面的框框颜色
+COLOR_CONTENT_PANEL_INSIDE_BORDER                       = COLOR_COMMON_DDDDDD         # 默认参数 - 颜色 - 内容主体界面的框框颜色
 
 COLOR_TEXT_BLACK                                        = "#222222"                 # 默认参数 - 颜色 - 文本颜色_黑色（不是纯黑，有一丁点的灰，但是几乎看不出来）
 COLOR_TEXT_THEME                                        = COLOR_SYSTEM_LOGO         # 默认参数 - 颜色 - 文本颜色_主题色
@@ -45,7 +46,7 @@ COLOR_DEVICE_BUTTON_HOVER                               = "#FAFAFA"             
 COLOR_DEVICE_BUTTON_DOWN                                = "#D1D1D1"                 # 默认参数 - 颜色 - 设备小图标按钮鼠标按下时的颜色
 COLOR_DEVICE_BUTTON_TOGGLED                             = "#D9D9D9"                 # 默认参数 - 颜色 - 设备小图标按钮被激活时的颜色
 
-COLOR_WORKPLACE_BLOCK_TITLE_BACKGROUND                  = "#DDDDDD"                 # 默认参数 - 颜色 - 工作台任务操作界面小标题背景颜色
+COLOR_WORKPLACE_BLOCK_TITLE_BACKGROUND                  = COLOR_COMMON_DDDDDD         # 默认参数 - 颜色 - 工作台任务操作界面小标题背景颜色
 COLOR_WORKPLACE_BOLT_NUMBER                             = "#444444"                 # 默认参数 - 颜色 - 工作台主要工作区域-产品展示区域-螺丝点位文字
 COLOR_WORKPLACE_BOLT_BORDER                             = "#444444"                 # 默认参数 - 颜色 - 工作台主要工作区域-产品展示区域-螺丝点位边框
 COLOR_WORKPLACE_BOLT_BG_WAITING                         = "#D9D9D9"                 # 默认参数 - 颜色 - 工作台主要工作区域-产品展示区域-螺丝点位背景_等待中

@@ -3,8 +3,8 @@ import encodings
 
 from enum import Enum, unique
 
-import src.main.configs as configs
-import src.main.utils.CommonUtils as CommonUtils
+import configs
+import utils.CommonUtils as CommonUtils
 
 
 @unique
