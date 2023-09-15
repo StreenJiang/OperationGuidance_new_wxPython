@@ -1,8 +1,8 @@
-import time
-
 import wx
 
+import configs
 from views.MainFrame import MainFrame
+from utils import ThreadPool
 
 
 class MainApp(wx.App):
@@ -24,6 +24,12 @@ class MainApp(wx.App):
 
         # 3. 开始画界面
         self.frame = MainFrame(parent = None, id = wx.ID_ANY, variables = variables)
+
+        # 4. 创建线程池
+        if not ThreadPool.initiate_pool(max_workers = configs.THREAD_POOL_TASK_MAS,
+                                        thread_name_prefix = configs.THREAD_POOL_PREFIX):
+            # 如果线程池初始化失败，则结束程序
+            return False
 
         # 设置顶端窗体
         self.SetTopWindow(self.frame)
@@ -83,10 +89,9 @@ class MainApp(wx.App):
         # 从存储在磁盘中的系统参数文件中读取数据，然后修改软件默认的系统参数
         pass
 
-    # def OnExit(self):
-    #     print("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz")
-    #     time.sleep(0.5)
-    #     return super().OnExit()
+    def OnExit(self):
+        # 清理线程池
+        return super().OnExit()
 
 
 if __name__ == '__main__':

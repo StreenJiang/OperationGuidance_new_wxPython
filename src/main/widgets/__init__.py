@@ -445,7 +445,9 @@ class CustomRadiusButton(buttons.GenBitmapButton):
         if self.button_size_type == BUTTON_SIZE_TYPE_BIG:
             font_temp.SetPointSize(int(w / 30 + h / 9) + 1)
         elif self.button_size_type == BUTTON_SIZE_TYPE_NORMAL:
-            font_temp.SetPointSize(int(w / 12 + h / 5) + 1)
+            pixel_h = h * 0.6
+            pixel_w = pixel_h * 0.5
+            font_temp.SetPixelSize((pixel_w, pixel_h))
         dc.SetFont(font_temp)
         tw, th = dc.GetTextExtent(label)
         tx, ty = (w - tw) // 2, math.ceil((h - th) / 2 - th / 20)
@@ -621,6 +623,11 @@ class CustomViewPanel(wx.Panel):
         return self.margin
 
 
+# 弹出框里的按钮的对齐方式
+BUTTONS_ALIGNMENT_CENTER = 0
+BUTTONS_ALIGNMENT_LEFT = 1
+BUTTONS_ALIGNMENT_RIGHT = 2
+
 # 通用的弹出型窗口组件
 class CustomPopupWindow(wx.PopupTransientWindow):
     # 为了提速暂时不做有右上方按钮的弹出窗，以后有需要再做
@@ -631,17 +638,23 @@ class CustomPopupWindow(wx.PopupTransientWindow):
 
     def __init__(self, parent: wx.Window,
                  title = "",
-                 border_color = configs.COLOR_SYSTEM_BACKGROUND,
+                 border_color = configs.COLOR_COMMON_DDDDDD,
                  background_color = configs.COLOR_SYSTEM_BACKGROUND):
         wx.PopupTransientWindow.__init__(self, parent)
         self.title = title
+        self.title_font_pixel_height = 0
         self.border_color = border_color
         self.background_color = background_color
         self.shadow_thickness = 4
         self.buttons = []
+        self.button_height = 0
+        self.buttons_alignment = BUTTONS_ALIGNMENT_RIGHT
         self.size_cache = None
         self.indent = 0
-        self.top_y = 0
+        self.content_size = (0, 0)
+        self.content_font_pixel_height = 0
+        self.content_font_pixel_size = None
+        self.content_panel = wx.Panel(self, wx.ID_ANY)
         self.Bind(wx.EVT_SHOW, self.on_show)
         self.Bind(wx.EVT_SIZE, self.on_size)
         self.Bind(wx.EVT_PAINT, self.on_paint)
@@ -664,30 +677,67 @@ class CustomPopupWindow(wx.PopupTransientWindow):
 
     def on_size(self, event):
         w, h = self.GetSize()
+        p_w, p_h = CommonUtils.GetTopParent(self).GetSize()
 
         # 若果没有缓存的size或者主窗体size有改变，则赋值
         if self.size_cache is None or self.GetSize() != self.size_cache:
             self.size_cache = w + self.shadow_thickness, h + self.shadow_thickness
             self.size_cache = self.size_cache
             w, h = self.size_cache
-            self.indent = int(w / 70 + h / 20)
+            self.indent = int(p_w / 190 + p_h / 90)
             self.SetSize(self.size_cache)
+            # 计算标题字体和内容字体大小
+            self.title_font_pixel_height = p_h * 0.03
+            self.content_font_pixel_height = self.title_font_pixel_height * 0.8
+            self.content_font_pixel_size = self.content_font_pixel_height / 2, self.content_font_pixel_height
             # 如果有按钮
             buttons_len = len(self.buttons)
             if buttons_len:
-                # 计算button的size和pos
-                b_w, b_h = self.calc_button_size()
+                self.button_height = 0
                 # 计算button之间的v_gap和button的h_gap
                 v_gap = w // 25
                 h_gap = self.indent
-                # 计算第一个button的起始pos
-                b_x_first = (w - b_w * buttons_len - v_gap * (buttons_len - 1)) // 2
-                b_y = h - b_h - h_gap
+                # 所有buttons的宽度总量
+                b_w_sum = 0
+                # button的y坐标值
+                b_y = 0
                 for index in range(buttons_len):
                     button = self.buttons[index]
+                    # 计算button的size和pos
+                    b_w, b_h = self.calc_button_size(button.label)
+                    if self.button_height == 0:
+                        self.button_height = b_h
                     button.SetSize(b_w, b_h)
-                    button.SetPosition((b_x_first + (b_w + v_gap) * index, b_y))
+                    # y坐标是一直不变的，只要拿到第一个按钮的高度，就能知道y坐标的值，因此只计算一次
+                    if b_y == 0:
+                        b_y = h - b_h - h_gap
+                    b_w_sum += b_w
+
+                next_b_x = 0
+                for index in range(buttons_len):
+                    button = self.buttons[index]
+                    b_w = button.GetSize()[0]
+                    b_x = 0
+                    # 计算当前button的x坐标值
+                    if next_b_x == 0:
+                        if self.buttons_alignment == BUTTONS_ALIGNMENT_CENTER:
+                            b_x = (w - b_w_sum - v_gap * (buttons_len - 1)) // 2
+                        elif self.buttons_alignment == BUTTONS_ALIGNMENT_LEFT:
+                            b_x = self.indent
+                        elif self.buttons_alignment == BUTTONS_ALIGNMENT_RIGHT:
+                            b_x = w - b_w_sum - self.indent - v_gap * (buttons_len - 1)
+                        next_b_x = b_x + v_gap + b_w
+                    else:
+                        b_x = next_b_x
+                        next_b_x += v_gap + b_w
+
+                    button.SetPosition((b_x, b_y))
                     button.Refresh()
+
+            # 最后重设content_panel的size和pos
+            c_size, c_pos = self.get_content_size_and_pos(w, h)
+            self.content_panel.SetSize(c_size)
+            self.content_panel.SetPosition(c_pos)
 
         event.Skip()
 
@@ -714,56 +764,63 @@ class CustomPopupWindow(wx.PopupTransientWindow):
         # 绘制标题
         if self.title is not None and self.title != "":
             font_temp = self.GetFont()
-            font_temp.SetPointSize(int(w / 90 + h / 25) + 1)
+            font_temp.SetPixelSize((self.title_font_pixel_height / 2, self.title_font_pixel_height))
             dc.SetFont(font_temp)
-            dc.DrawText(self.title, self.indent, self.indent * 0.8)
+            dc.DrawText(self.title, self.indent, self.indent)
 
         # 绘制分割线
         line_len = w - self.indent * 2
-        line_height = self.indent * 0.8
+        line_height = self.indent
         if self.title is not None and self.title != "":
-            line_height += dc.GetTextExtent(self.title)[1] * 1.2
+            line_height += self.title_font_pixel_height * 1.4
         dc.SetPen(wx.Pen(configs.COLOR_COMMON_DDDDDD, 1))
         dc.DrawLine(self.indent, line_height, line_len + self.indent, line_height)
 
         del dc
         event.Skip()
 
-    def GetFont(self) -> wx.Font:
-        return super().GetFont()
-
     def center_on_parent(self):
-        p_x, p_y = self.GetParent().GetPosition()
-        p_w, p_h = self.GetParent().GetSize()
+        p_x, p_y = CommonUtils.GetTopParent(self).GetPosition()
+        p_w, p_h = CommonUtils.GetTopParent(self).GetSize()
         w, h = self.GetSize()
         self.SetPosition((p_x + p_w // 2 - w // 2, p_y + p_h // 2 - h // 2))
         # self.Refresh()
 
-    def calc_button_size(self):
-        p_w, p_h = self.GetParent().GetSize()
-        b_h = math.ceil(p_h / 32)
-        b_w = b_h * 2.5
+    def calc_button_size(self, label):
+        p_w, p_h = CommonUtils.GetTopParent(self).GetSize()
+        b_h = math.ceil(p_h / 27)
+        b_w = b_h * 1.5 + b_h * 0.5 * len(label)
         return b_w, b_h
+
+    def get_content_size_and_pos(self, w, h):
+        c_w = w - self.indent * 2
+        c_h = h - self.indent * 4
+        c_x = self.indent
+        c_y = self.indent * 2
+        if self.title is not None and self.title != "":
+            c_h -= self.title_font_pixel_height * 1.4 + self.button_height
+            c_y += self.title_font_pixel_height * 1.4
+        self.content_size = (c_w, c_h)
+        return (c_w, c_h), (c_x, c_y)
 
 
 # 自定义TextCtrl组件
 class CustomTextCtrl(wx.Control):
     def __init__(self, parent, id = wx.ID_ANY, pos = wx.DefaultPosition,
                  size = wx.DefaultSize, style = 0, validator = wx.DefaultValidator,
-                 name = "CustomTextCtrl", hint = ""):
-        wx.Control.__init__(self, parent, id, pos, size, style, validator, name)
-        self.text_control = wx.TextCtrl(self, style = wx.BORDER_NONE, validator = validator)
-        self.text_control.SetHint(hint)
+                 name = "CustomTextCtrl", hint = "", value = "", background_color = ""):
+        wx.Control.__init__(self, parent, id, pos, size, wx.BORDER_NONE | style, validator, name)
+        self.text_control = wx.TextCtrl(self, value = value, style = wx.BORDER_NONE | style, validator = validator)
+        self.text_control.SetBackgroundColour(background_color)
+        if hint:
+            self.text_control.SetHint(hint)
         self.indent = 0
         self.Bind(wx.EVT_SIZE, self.on_size)
         self.Bind(wx.EVT_PAINT, self.on_paint)
 
     def on_size(self, event):
         w, h = self.GetSize()
-        self.indent = h // 10
-        font_temp = self.text_control.GetFont()
-        font_temp.SetPointSize(self.calc_font_size(h))
-        self.text_control.SetFont(font_temp)
+        self.indent = h // 8
         self.text_control.SetSize(w - 2 - self.indent * 2, h - 2 - self.indent * 2)
         self.text_control.SetPosition((1 + self.indent, 1 + self.indent))
         event.Skip()
@@ -778,8 +835,9 @@ class CustomTextCtrl(wx.Control):
         del dc
         event.Skip()
 
-    def calc_font_size(self, h):
-        return math.floor(math.ceil(h / 2.7) + 0.4)
+    def SetFont(self, font):
+        super().SetFont(font)
+        self.text_control.SetFont(font)
 
     def GetValue(self):
         return self.text_control.GetValue()

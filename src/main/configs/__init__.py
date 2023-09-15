@@ -10,6 +10,9 @@ LENGTH_MAIN_MENU                                        = 5                     
 LENGTH_CHILD_MENU                                       = 7                         # 子菜单名称字数
 PATH_LOGO_IMAGE                                         = "configs/icons/logo.png"  # logo图片存储路径
 
+THREAD_POOL_TASK_MAS                                    = 10                        # 线程池异步运行最大数
+THREAD_POOL_PREFIX                                      = "pool_thread"             # 线程池异步运行最大数
+
 COLOR_COMMON_GREEN                                      = "#2AB514"                 # 默认参数 - 颜色 - 通用绿色（成功、完成等）
 COLOR_COMMON_WHITE                                      = "#FEFEFE"                 # 默认参数 - 颜色 - 通用白色
 COLOR_COMMON_RED                                        = "#F01414"                 # 默认参数 - 颜色 - 通用红色（错误）

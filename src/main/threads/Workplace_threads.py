@@ -407,17 +407,23 @@ class WorkplaceWorkingDataThread(threading.Thread):
                 font_temp.SetPointSize(self.window.torque_font_size)
                 dc.SetFont(font_temp)
                 torque_w, torque_h = dc.GetTextExtent(torque)
-                dc.DrawText(torque,
-                            x = w - torque_w - horizontal_indent,
-                            y = title_h + vertical_indent * 2 + w_h_difference)
+                dc.SetPen(wx.Pen(self.window.GetBackgroundColour(), 1))
+                dc.SetBrush(dc.GetBackground())
+                torque_text_x = w - torque_w - horizontal_indent
+                torque_text_y = title_h + vertical_indent * 2 + w_h_difference
+                dc.DrawRoundedRectangle(x = torque_text_x, y = torque_text_y + vertical_indent,
+                                        width = torque_w, height = torque_h - vertical_indent * 2, radius = 0)
+                dc.DrawText(torque, x = torque_text_x, y = torque_text_y)
 
                 # 绘制角度实时数据
                 font_temp.SetPointSize(self.window.angle_font_size)
                 dc.SetFont(font_temp)
                 angle_w, angle_h = dc.GetTextExtent(angle)
-                dc.DrawText(angle,
-                            x = w - angle_w - horizontal_indent,
-                            y = title_h * 2 + torque_h + vertical_indent * 5 + w_h_difference)
+                angle_text_x = w - angle_w - horizontal_indent
+                angle_text_y = title_h * 2 + torque_h + vertical_indent * 5 + w_h_difference
+                dc.DrawRoundedRectangle(x = angle_text_x, y = angle_text_y + vertical_indent,
+                                        width = angle_w, height = angle_h - vertical_indent * 2, radius = 0)
+                dc.DrawText(angle, x = angle_text_x, y = angle_text_y)
 
                 # 背景设为透明（不遮挡其它已经绘制好的信息）
                 dc.SetBrush(wx.TRANSPARENT_BRUSH)

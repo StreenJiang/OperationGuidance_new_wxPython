@@ -1,11 +1,14 @@
+import threading
+
 import wx
 import math
+from typing import List, Type
 
 import configs, widgets
 from controllers import DeviceService as deviceService
 from models import Device as dvs, ProductMission as pdctmsn
 from threads import Workplace_threads as wThread
-from utils import CommonUtils, CacheUtil
+from utils import CommonUtils, CacheUtil, ThreadPool
 from enums.Cache import CacheEnum as cache
 
 # 返回按钮的TEXT
@@ -147,7 +150,7 @@ class WorkplaceView(wx.Panel):
         self.product_sides_panel = self.content_panel.add_right_bottom(self.mission_obj)
 
     # 获取缓存数据 - 设备列表
-    def get_devices(self):
+    def get_devices(self) -> List[dvs.Device]:
         # 初始化“数据是否有变化”变量
         self.devices_changed = False
 
@@ -214,7 +217,7 @@ class WorkplaceView(wx.Panel):
     def on_show(self, event):
         if event.IsShown():
             for thread_each in self.threads_arr:
-                thread_class = thread_each["class"]
+                thread_class: Type[threading.Thread] = thread_each["class"]
                 args = thread_each["args"]
                 kws = thread_each["kws"]
                 t = thread_each["obj"]
@@ -222,6 +225,12 @@ class WorkplaceView(wx.Panel):
                     t = thread_class(*args, **kws)
                     t.start()
                     thread_each["obj"] = t
+                # if t is None:
+                #     t = thread_class(*args, **kws)
+                #     # future = ThreadPool.submit(t)
+                #     future = ThreadPool.submit(thread_class, *args, **kws)
+                #     print("future.running(): ", future.running())
+                #     thread_each["obj"] = t
         else:
             for thread_each in self.threads_arr:
                 t = thread_each["obj"]
@@ -231,9 +240,9 @@ class WorkplaceView(wx.Panel):
         event.Skip()
 
     # 向thread_arr中添加线程
-    def register_thread(self, thread, *args, **kws):
+    def register_thread(self, thread_class: threading.Thread, *args, **kws):
         thread_dict = {
-            "class": thread,
+            "class": thread_class,
             "args": args,
             "kws": kws,
             "obj": None
@@ -558,7 +567,7 @@ class LeftPanel(widgets.CustomBorderPanel):
 
         super().on_size(event)
 
-    def set_devices(self, devices):
+    def set_devices(self, devices: List[dvs.Device]):
         for device in devices:
             category_key = device.GetDeviceCategory()["category_id"]
             if category_key not in self.device_blocks.keys():
@@ -630,7 +639,7 @@ class LeftPanel(widgets.CustomBorderPanel):
                      border_color = configs.COLOR_CONTENT_PANEL_INSIDE_BORDER, margin = 0, radius = 0):
             widgets.CustomBorderPanel.__init__(self, parent, id, border_thickness = border_thickness,
                                                border_color = border_color, margin = margin, radius = radius)
-            self.devices = []
+            self.devices: List[dvs.Device] = []
             self.data_changed = False
             self.icons = None
             self.icon_bitmap = None
@@ -726,7 +735,7 @@ class LeftPanel(widgets.CustomBorderPanel):
             self.SetBackgroundColour(self.background_color)
             self.Refresh()
 
-        def add_device(self, device):
+        def add_device(self, device: dvs.Device):
             self.devices.append(device)
             self.set_icons(device.GetDeviceCategory()["icons"])
             self.data_changed = True
@@ -779,7 +788,7 @@ class LeftPanel(widgets.CustomBorderPanel):
             w, h = self.GetSize()
             screen_x, screen_y = self.GetScreenPosition()
 
-            dp_w = w * 5
+            dp_w = w * 5.5
             dp_h = h * count
             dp_x = w + screen_x
             dp_y = screen_y
@@ -792,7 +801,7 @@ class LeftPanel(widgets.CustomBorderPanel):
                 self.background_color = background_color
                 self.border_color = border_color
                 self.shadow_thickness = 4 # 小组件阴影厚度
-                self.device_info_arr = []
+                self.device_info_arr: List[dict] = []
                 self.size_cache = None
 
                 self.Bind(wx.EVT_SIZE, self.on_size)
@@ -807,6 +816,12 @@ class LeftPanel(widgets.CustomBorderPanel):
                 # 计算自身size和pos（在逻辑上的父panel计算过了（实际上的父panel是DeviceBlock的父panel）)
                 if self.size_cache is not None and self.size_cache["panel_size"] != self.GetSize():
                     self.size_cache = None
+                    for index in range(len(self.device_info_arr)):
+                        device_info = self.device_info_arr[index]
+                        button = device_info["button"]
+                        if button and button.IsEnabled():
+                            popup_window = button.popup_window
+                            popup_window.SetSize(self.calc_operation_popup())
                 event.Skip()
 
             def on_paint(self, event):
@@ -824,14 +839,16 @@ class LeftPanel(widgets.CustomBorderPanel):
 
                         if info_len > 0:
                             h_info = math.ceil(h / info_len)
-                            h_gap = 0
+                            v_gap = 0
                             self.size_cache["size_pos_arr"] = []
                             for index in range(info_len):
                                 size_pos = {
-                                    "font_size": None,
-                                    "icon_size": None,
-                                    "icon_pos": None,
-                                    "text_pos": None
+                                    "font_size":    None,
+                                    "icon_size":    None,
+                                    "button_size":  None,
+                                    "icon_pos":     None,
+                                    "text_pos":     None,
+                                    "button_pos":   None,
                                 }
                                 info = self.device_info_arr[index]
 
@@ -857,18 +874,28 @@ class LeftPanel(widgets.CustomBorderPanel):
                                 # 图标左侧的缩进
                                 w_indent = math.ceil(w / 40)
                                 # 如果有多个设备，则每个设备之间信息显示的gap
-                                h_gap = math.ceil((h_info - bh) / 2)
-                                b_x = math.ceil((w - tw - bw - w_indent) / 4)
-                                b_y = math.ceil((h_info - bh) / 2) + (h_info - h_gap) * index
+                                v_gap = math.ceil((h_info - bh) / 2)
+                                b_x = math.ceil((w - tw - bw - w_indent) / 5.5)
+                                b_y = math.ceil((h_info - bh) / 2) + (h_info - v_gap) * index
                                 size_pos["icon_pos"] = (b_x, b_y) # 存入缓存
                                 t_x = b_x + bw + w_indent
-                                t_y = math.ceil((h_info - th) / 2 - math.ceil(th / 20)) + (h_info - h_gap) * index
+                                t_y = math.ceil((h_info - th) / 2 - math.ceil(th / 20)) + (h_info - v_gap) * index
                                 size_pos["text_pos"] = (t_x, t_y) # 存入缓存
+
+                                # 重新计算button的size和pos
+                                button: widgets.CustomRadiusButton = info["button"]
+                                if button:
+                                    button_h = bh * 0.85
+                                    button_w = button_h * 1.3 + button_h * 0.5 * len(button.label)
+                                    button_x = w - button_w - w_indent
+                                    button_y = math.ceil((h_info - button_h) / 2) + (h_info - v_gap) * index
+                                    size_pos["button_size"] = (button_w, button_h)  # 存入缓存
+                                    size_pos["button_pos"] = (button_x, button_y)  # 存入缓存
 
                                 self.size_cache["size_pos_arr"].append(size_pos)
 
                             # 将多余的高度去掉
-                            panel_size = (w + shadow_thickness, h - h_gap * (info_len - 1) + shadow_thickness)
+                            panel_size = (w + shadow_thickness, h - v_gap * (info_len - 1) + shadow_thickness)
                             self.size_cache["panel_size"] = panel_size
                             self.SetSize(panel_size)
 
@@ -909,6 +936,15 @@ class LeftPanel(widgets.CustomBorderPanel):
                         dc.DrawBitmap(bitmap, (b_x, b_y), bitmap.GetMask() is not None)
                         dc.DrawText(device_info, (t_x, t_y))
 
+                        # 重设button的size和pos
+                        button: widgets.CustomRadiusButton = info["button"]
+                        if button:
+                            button_w, button_h = size_pos_arr[index]["button_size"]
+                            button_x, button_y = size_pos_arr[index]["button_pos"]
+                            button.SetSize(button_w, button_h)
+                            button.SetPosition((button_x, button_y))
+
+                    # 绘制阴影
                     w, h = self.size_cache["panel_size"]
                     shadow_w, shadow_h = w - shadow_thickness, h - shadow_thickness
                     for i in range(shadow_thickness):
@@ -919,21 +955,48 @@ class LeftPanel(widgets.CustomBorderPanel):
                     # 删除DC
                     del dc
 
-            def add_device_info(self, device):
+            def add_device_info(self, device: dvs.Device):
                 self.device_info_arr.append({
                     "id": device.GetId(),
                     "ip": device.GetDeviceIp(),
                     "port": device.GetDevicePort(),
-                    "status_const": device.GetDeviceStatus()
+                    "status_const": device.GetDeviceStatus(),
+                    "brand_const": device.GetDeviceBrand(),
+                    "button": self.needs_operation_button(device),
                 })
 
-            def set_device_info(self, index, device):
+            def set_device_info(self, index, device: dvs.Device):
+                self.device_info_arr[index]["button"].Destroy()
                 self.device_info_arr[index] = {
                     "id": device.GetId(),
                     "ip": device.GetDeviceIp(),
                     "port": device.GetDevicePort(),
-                    "status_const": device.GetDeviceStatus()
+                    "status_const": device.GetDeviceStatus(),
+                    "brand_const": device.GetDeviceBrand(),
+                    "button": self.needs_operation_button(device),
                 }
+
+            def needs_operation_button(self, device: dvs.Device):
+                if device.GetDeviceBrand() is not None:
+                    button = widgets.CustomRadiusButton(self, wx.ID_ANY,
+                                                        label = "操作",
+                                                        font_color = configs.COLOR_BUTTON_TEXT,
+                                                        background_color = configs.COLOR_BUTTON_BACKGROUND,
+                                                        clicked_color = configs.COLOR_BUTTON_FOCUSED,
+                                                        radius = 2)
+                    if device.GetDeviceStatus() == dvs.DEVICE_STATUS_DISCONNECTED:
+                        button.Disable()
+                    button.device = device
+                    button.popup_window = None
+                    button.Bind(wx.EVT_LEFT_UP, self.operation_button_click)
+                    return button
+                return None
+
+            def operation_button_click(self, event):
+                button = event.GetEventObject()
+                if button.device.GetDeviceStatus() == dvs.DEVICE_STATUS_CONNECTED:
+                    self.show_operation_window(button)
+                event.Skip()
 
             def count_device_info(self):
                 return len(self.device_info_arr)
@@ -945,6 +1008,147 @@ class LeftPanel(widgets.CustomBorderPanel):
                 i_w, i_h = image_size
                 i_w, i_h = CommonUtils.CalculateNewSizeWithSameRatio((i_w, i_h), w * 0.1 / i_w)
                 return i_w, i_h
+
+            def calc_operation_popup(self):
+                tp_w, tp_h = CommonUtils.GetTopParent(self).GetSize()
+                return tp_w // 1.7, tp_h // 6 + tp_w * 0.015
+
+            def show_operation_window(self, button):
+                if button.popup_window is None:
+                    button.popup_window = self.OperationPopupWindow(self.GetParent(),
+                                                                    device = button.device,
+                                                                    size = self.calc_operation_popup())
+                button.popup_window.Show()
+
+            class OperationPopupWindow(widgets.CustomPopupWindow):
+                def __init__(self, parent, device: dvs.Device, size):
+                    widgets.CustomPopupWindow.__init__(self, parent, "手动操作工具")
+                    self.device = device
+                    self.thread = device.GetDeviceThread()
+                    self.add_button("禁用", self.lock_device)
+                    self.add_button("使能", self.unlock_device)
+                    self.add_button("下发", self.switch_pset)
+                    self.add_button("关闭", self.close)
+                    # 所有detail的数组
+                    self.inner_widgets: List[dict] = []
+                    # 创建一个垂直存每一行组件的panel数组
+                    self.lines: List[wx.Panel] = []
+
+                    # 第一行信息
+                    self.panel_1 = wx.Panel(self.content_panel, wx.ID_ANY)
+                    self.lines.append(self.panel_1)
+                    # 站点
+                    self.station_id_txt_ctrl = self.add_widget(self.panel_1, "站点")
+                    # 程序
+                    self.pset_txt_ctrl = self.add_widget(self.panel_1, "程序")
+
+                    self.SetSize(size)
+
+                def lock_device(self, event):
+                    print("禁用设备")
+                    # self.Hide()
+                    event.Skip()
+
+                def unlock_device(self, event):
+                    print("使能设备")
+                    # self.Hide()
+                    event.Skip()
+
+                def switch_pset(self, event):
+                    station_id = int(self.station_id_txt_ctrl.GetValue())
+                    pset = int(self.pset_txt_ctrl.GetValue())
+                    print(f"pset切换：站点 = {station_id}，程序 = {pset}")
+                    # self.Hide()
+                    event.Skip()
+
+                def close(self, event):
+                    self.Hide()
+                    event.Skip()
+
+                def on_size(self, event):
+                    super().on_size(event)
+
+                    if self.content_font_pixel_size is None:
+                        return
+                    # 内容的内、外边距
+                    content_gap = self.indent / 2
+                    # 循环给所有组件设置字体大小
+                    font_temp = self.GetFont()
+                    font_temp.SetPixelSize(self.content_font_pixel_size)
+                    # 找到所有title中最长的那个，以那个长度为基准设置text_control的起始位置
+                    longest_title_width = 0
+                    for json_obj in self.inner_widgets:
+                        json_obj["text_control"].SetFont(font_temp)
+                        title_st: wx.StaticText = json_obj["title"]
+                        title_st.SetFont(font_temp)
+                        width_of_title = title_st.GetSize()[0]
+                        # 找到最长的title的width
+                        if width_of_title > longest_title_width:
+                            longest_title_width = width_of_title
+
+                    # 重设所有组件的size和pos
+                    len_of_lines = len(self.lines)
+                    panel_size = self.calc_panel_size(self.content_size, len_of_lines)
+                    for index in range(len_of_lines):
+                        panel_w, panel_h = panel_size
+                        # 重设panel的size和pos
+                        panel = self.lines[index]
+                        panel.SetSize(panel_size)
+                        panel.SetPosition(self.calc_panel_pos(panel_h, index))
+                        # 获取每一行panel中的 title + text 对
+                        children = panel.GetChildren()
+                        len_of_children = len(children)
+                        cols = math.ceil(len_of_children / 2)
+                        # 循环每一个组件
+                        for i in range(len_of_children):
+                            if i % 2 == 0:
+                                title_st: wx.StaticText = children[i]
+                                title_st_x = (i // cols) * (panel_w // cols + content_gap) + (longest_title_width - title_st.GetSize()[0])
+                                title_st_y = (panel_h - title_st.GetSize()[1]) // 2
+                                title_st.SetPosition((title_st_x, title_st_y))
+                            else:
+                                text_ctrl = children[i]
+                                text_ctrl_w = (panel_w - (cols - 1) * self.indent - cols * longest_title_width) // 2 - content_gap * cols
+                                text_ctrl_h = self.content_font_pixel_height * 1.8
+                                text_ctrl_x = (i // cols) * (panel_w // cols + content_gap) + longest_title_width + content_gap * cols
+                                text_ctrl_y = (panel_h - text_ctrl_h) // 2
+                                text_ctrl.SetSize(text_ctrl_w, text_ctrl_h)
+                                text_ctrl.SetPosition((text_ctrl_x, text_ctrl_y))
+                                if not isinstance(text_ctrl, widgets.CustomTextCtrl):
+                                    ts = text_ctrl.GetChildren()
+                                    t1: widgets.CustomTextCtrl = ts[0]
+                                    t2: wx.StaticText = ts[1]
+                                    t3: widgets.CustomTextCtrl = ts[2]
+                                    child_w = (text_ctrl_w - self.indent * 2) // 2
+                                    # 设置下限
+                                    t1.SetSize(child_w, text_ctrl_h)
+                                    t1.SetFont(font_temp)
+                                    t1.SetPosition((0, 0))
+                                    # “~”符号
+                                    t2.SetFont(font_temp)
+                                    label_w, label_h = t2.GetSize()
+                                    t2.SetPosition((child_w + (label_w // 2), (text_ctrl_h - label_h) // 2))
+                                    # 设置上限
+                                    t3.SetSize(child_w, text_ctrl_h)
+                                    t3.SetFont(font_temp)
+                                    t3.SetPosition((child_w + self.indent * 2, 0))
+
+                def add_widget(self, parent, title):
+                    json_obj = {
+                        "title": wx.StaticText(parent, label = title),
+                        "text_control": widgets.CustomTextCtrl(parent, value = "1",
+                                                               background_color = configs.COLOR_COMMON_WHITE,
+                                                               validator = widgets.NumericalValidator())
+                    }
+                    self.inner_widgets.append(json_obj)
+                    return json_obj["text_control"]
+
+                def calc_panel_size(self, content_size, len_of_lines):
+                    c_w, c_h = content_size
+                    return c_w, c_h // len_of_lines
+
+                def calc_panel_pos(self, panel_h, index):
+                    return 0, panel_h * index
 
 
 
@@ -1051,29 +1255,24 @@ class MiddleTopPanel(widgets.CustomBorderPanel):
 
     def calc_popup_window(self):
         tp_w, tp_h = self.GetTopLevelParent().GetSize()
-        return tp_w // 1.7, tp_h // 4.5
+        return tp_w // 1.7, tp_h // 6 + tp_w * 0.015
 
     # 弹框组件
     class InnerPopup(widgets.CustomPopupWindow):
         def __init__(self, parent, title, size, hint, out_put_window: wx.TextCtrl):
             widgets.CustomPopupWindow.__init__(self, parent, title)
             self.hint = hint
-            self.add_button("确定", self.on_confirm)
-            self.add_button("取消", self.on_cancel)
+            self.add_button("确定", self.confirm)
+            self.add_button("取消", self.cancel)
 
-            self.text_control = widgets.CustomTextCtrl(self, style = wx.BORDER_NONE, hint = hint, validator = widgets.NumericalValidator())
+            self.text_control = widgets.CustomTextCtrl(self.content_panel, hint = hint, validator = widgets.NumericalValidator())
             self.text_control.SetBackgroundColour(configs.COLOR_COMMON_WHITE)
-            # TODO: 得加一个键盘按回车的事件
+            # TODO: 得加一个ENTER确定的事件、一个ESC退出事件
             self.out_put_window = out_put_window
 
             self.SetSize(size)
-            self.Refresh()
 
-        def on_cancel(self, event):
-            self.Hide()
-            event.Skip()
-
-        def on_confirm(self, event):
+        def confirm(self, event):
             self.Hide()
             text = self.text_control.GetValue()
             if text is not None and text != "":
@@ -1082,24 +1281,22 @@ class MiddleTopPanel(widgets.CustomBorderPanel):
                 self.out_put_window.SetValue(self.hint)
             event.Skip()
 
+        def cancel(self, event):
+            self.Hide()
+            event.Skip()
+
         def on_size(self, event):
             super().on_size(event)
-            w, h = self.GetSize()
-            text_control_size = self.calc_text_control_size(w, h)
-            self.text_control.SetSize(text_control_size)
-            self.text_control.SetPosition(self.calc_text_control_pos(h, text_control_size[1]))
+            self.text_control.SetSize(self.content_panel.GetSize())
+            if self.content_font_pixel_height:
+                font_temp = self.text_control.GetFont()
+                font_temp.SetPixelSize(self.content_font_pixel_size)
+                self.text_control.SetFont(font_temp)
 
         def on_show(self, event):
             super().on_show(event)
             if not event.IsShown:
                 self.GetParent().Refresh()
-
-        def calc_text_control_size(self, w, h):
-            return w - self.indent * 2, h // 5
-
-        def calc_text_control_pos(self, h, text_control_h):
-            return self.indent, (h - text_control_h) // 2
-
 
 
 # 中间下方的产品展示、工作流程panel
@@ -1130,6 +1327,8 @@ class MiddleBottomPanel(widgets.CustomBorderPanel):
         mission_side = self.mission_obj.GetMissionProductSides()[self.mission_indexs[0]]
         mission_image = mission_side.GetSideImage().GetImageOriginal()
         bolts = mission_side.GetBolts()
+
+        self.mission_obj.GetMissionProductSides()[0].GetBolts()
 
         # 1. 判断当前indexs是否与之前一致，如果不一致则直接跳过其他判断直接重新获取数据
         if self.mission_indexs_cache == self.mission_indexs:
@@ -1173,7 +1372,7 @@ class MiddleBottomPanel(widgets.CustomBorderPanel):
                 bolt.button.bolt_position = bolt.GetBoltPosition()
                 bolt.button.Hide()
                 # 绑定点击事件（通过覆盖在staticBitmap上的透明panel触发）
-                bolt.button.blank_panel.Bind(wx.EVT_LEFT_DOWN, self.bolt_button_key_down)
+                bolt.button.blank_panel.Bind(wx.EVT_LEFT_UP, self.bolt_button_key_up)
             if self.current_working_bolt is None and index == self.mission_indexs[1]:
                 self.current_working_bolt = bolt.button
 
@@ -1182,23 +1381,9 @@ class MiddleBottomPanel(widgets.CustomBorderPanel):
         # 返回True表示数据有更新
         return True
 
-    def bolt_button_key_down(self, event):
+    def bolt_button_key_up(self, event):
         bolt_button = event.GetEventObject()
-        # 判断此时选中的螺丝孔位是否就是当前正在工作的螺丝孔位，不是的话继续执行
-        if bolt_button.real_widget is not self.current_working_bolt:
-            # 先将之前螺丝孔位的状态改回其在数据库中的状态
-            bolt = self.current_working_bolt.bolt_obj
-            self.current_working_bolt.set_status_temp(bolt.GetBoltStatus())
-            self.current_working_bolt.mission_obj.mission_status_temp = None
-            self.current_working_bolt.Refresh()
-            # 将此时选中的螺丝孔位的状态改为进行中（先改成拧紧中，因为拧紧中和反松中都是进行中，主要是为了螺丝孔位的显示效果。实际是什么状态在实际操作时会再次确认）
-            bolt_button.real_widget.Refresh()
-            self.current_working_bolt = bolt_button.real_widget
-            # 更新数据库中的数据，修改产品任务对象的indexs值
-            indexs_temp = bolt_button.real_widget.mission_obj.GetMissionIndexs()
-            indexs_temp[1] = bolt_button.real_widget.current_index
-            bolt_button.real_widget.mission_obj.SetMissionIndexs(indexs_temp)
-            bolt_button.real_widget.mission_obj.mission_status_temp = pdctmsn.STATUS_MISSION_READY
+        bolt_button.real_widget.show_details_window()
         event.Skip()
 
     def on_size(self, event):
@@ -1280,13 +1465,6 @@ class MiddleBottomPanel(widgets.CustomBorderPanel):
         bolt_x, bolt_y = bolt_position
         return bolt_x // 2, bolt_y // 2
 
-
-    # 测试panel
-    class BlankPanel(wx.Panel):
-        def __init__(self, parent):
-            wx.Panel.__init__(self, parent, wx.ID_ANY)
-
-
     # 螺丝点位block按钮内部组件
     class BoltButton(wx.Control):
         def __init__(self, parent, id = wx.ID_ANY, pos = wx.DefaultPosition,
@@ -1306,9 +1484,12 @@ class MiddleBottomPanel(widgets.CustomBorderPanel):
             self.bolt_position = (0, 0)
             self.border_thickness = 0
             self.current_background_color = self.get_color_by_status()[0]
+
             # 弄一个parent是产品图片staticBitmap的透明的panel，用来触发此组件本身的事件（因为staticBitmap挡住了）
             self.blank_panel = wx.Panel(parent.static_bitmap, wx.ID_ANY, style = wx.TRANSPARENT_WINDOW)
             self.blank_panel.real_widget = self
+            # 螺栓点位详情
+            self.details_window = None
 
             self.Bind(wx.EVT_ERASE_BACKGROUND, lambda event: None)
             self.blank_panel.Bind(wx.EVT_ERASE_BACKGROUND, lambda event: None)
@@ -1333,6 +1514,9 @@ class MiddleBottomPanel(widgets.CustomBorderPanel):
             w, h = self.GetSize()
             self.blank_panel.SetSize(w, h)
             self.border_thickness = math.ceil(w / 20)
+            # 设置螺栓点位详情窗口的大小
+            if self.details_window is not None:
+                self.details_window.SetSize(self.calc_details_window())
             event.Skip()
 
         def on_paint(self, event):
@@ -1437,6 +1621,169 @@ class MiddleBottomPanel(widgets.CustomBorderPanel):
                     configs.COLOR_WORKPLACE_BOLT_BG_WAITING_HOVER,
                     configs.COLOR_WORKPLACE_BOLT_BG_WAITING_KEY_DOWN,
                 ]
+
+        def calc_details_window(self):
+            tp_w, tp_h = self.GetTopLevelParent().GetSize()
+            return tp_w // 1.3, tp_h // 2.7 + tp_w * 0.015
+
+        def show_details_window(self):
+            if self.details_window is None:
+                self.details_window = self.BoltDetailsPopupWindow(self.GetTopLevelParent(),
+                                                                  size = self.calc_details_window(),
+                                                                  bolt_obj = self.bolt_obj)
+            self.details_window.Show()
+
+        # 螺丝孔位详情弹框组件
+        class BoltDetailsPopupWindow(widgets.CustomPopupWindow):
+            def __init__(self, parent, size, bolt_obj: pdctmsn.ProductBolt):
+                widgets.CustomPopupWindow.__init__(self, parent, bolt_obj.GetBoltName())
+                self.bolt_obj = bolt_obj
+                self.add_button("切换到此点位", self.switch)
+                self.add_button("关闭", self.close)
+                # 所有detail的数组
+                self.detail_widgets: List[dict] = []
+                # 创建一个垂直存每一行组件的panel数组
+                self.lines: List[wx.Panel] = []
+
+                # 第一行信息
+                self.panel_1 = wx.Panel(self.content_panel, wx.ID_ANY)
+                self.lines.append(self.panel_1)
+                # 螺栓点位描述
+                self.add_bolt_detail_widget(self.panel_1, "螺栓点位描述", bolt_obj.GetBoltDescription())
+                # 螺栓规格
+                self.add_bolt_detail_widget(self.panel_1, "螺栓规格", bolt_obj.GetBoltSpecification())
+
+                # 第二行信息
+                self.panel_2 = wx.Panel(self.content_panel, wx.ID_ANY)
+                self.lines.append(self.panel_2)
+                # 工具id
+                self.add_bolt_detail_widget(self.panel_2, "工具id", bolt_obj.GetToolID())
+                # 工具描述
+                self.add_bolt_detail_widget(self.panel_2, "工具描述", bolt_obj.GetToolDescription())
+
+                # 第三行信息
+                self.panel_3 = wx.Panel(self.content_panel, wx.ID_ANY)
+                self.lines.append(self.panel_3)
+                # 批头规格
+                self.add_bolt_detail_widget(self.panel_3, "批头规格", bolt_obj.GetBitSpecification())
+                # pset
+                self.add_bolt_detail_widget(self.panel_3, "pset", bolt_obj.GetProcedureSet())
+
+                # 第四行信息
+                self.panel_4 = wx.Panel(self.content_panel, wx.ID_ANY)
+                self.lines.append(self.panel_4)
+                # 扭矩上下限
+                self.add_bolt_detail_widget(self.panel_4, "扭矩上下限", bolt_obj.GetTorqueLimit())
+                # 角度上下限
+                self.add_bolt_detail_widget(self.panel_4, "角度上下限", bolt_obj.GetAngleLimit())
+
+                self.SetSize(size)
+
+            def switch(self, event):
+                print("切换到此点位")
+                self.Hide()
+                event.Skip()
+
+            def close(self, event):
+                self.Hide()
+                event.Skip()
+
+            def on_size(self, event):
+                super().on_size(event)
+
+                if self.content_font_pixel_size is None:
+                    return
+                # 内容的内、外边距
+                content_gap = self.indent / 2
+                # 循环给所有组件设置字体大小
+                font_temp = self.GetFont()
+                font_temp.SetPixelSize(self.content_font_pixel_size)
+                # 找到所有title中最长的那个，以那个长度为基准设置text_control的起始位置
+                longest_title_width = 0
+                for json_obj in self.detail_widgets:
+                    json_obj["text_control"].SetFont(font_temp)
+                    title_st: wx.StaticText = json_obj["title"]
+                    title_st.SetFont(font_temp)
+                    width_of_title = title_st.GetSize()[0]
+                    # 找到最长的title的width
+                    if width_of_title > longest_title_width:
+                        longest_title_width = width_of_title
+
+                # 重设所有组件的size和pos
+                len_of_lines = len(self.lines)
+                panel_size = self.calc_panel_size(self.content_size, len_of_lines)
+                for index in range(len_of_lines):
+                    panel_w, panel_h = panel_size
+                    # 重设panel的size和pos
+                    panel = self.lines[index]
+                    panel.SetSize(panel_size)
+                    panel.SetPosition(self.calc_panel_pos(panel_h, index))
+                    # 获取每一行panel中的 title + text 对
+                    children = panel.GetChildren()
+                    len_of_children = len(children)
+                    cols = math.ceil(len_of_children / 2)
+                    # 循环每一个组件
+                    for i in range(len_of_children):
+                        if i % 2 == 0:
+                            title_st: wx.StaticText = children[i]
+                            title_st_x = (i // cols) * (panel_w // cols + content_gap) + (longest_title_width - title_st.GetSize()[0])
+                            title_st_y = (panel_h - title_st.GetSize()[1]) // 2
+                            title_st.SetPosition((title_st_x, title_st_y))
+                        else:
+                            text_ctrl = children[i]
+                            text_ctrl_w = (panel_w - (cols - 1) * self.indent - cols * longest_title_width) // 2 - content_gap * cols
+                            text_ctrl_h = self.content_font_pixel_height * 1.8
+                            text_ctrl_x = (i // cols) * (panel_w // cols + content_gap) + longest_title_width + content_gap * cols
+                            text_ctrl_y = (panel_h - text_ctrl_h) // 2
+                            text_ctrl.SetSize(text_ctrl_w, text_ctrl_h)
+                            text_ctrl.SetPosition((text_ctrl_x, text_ctrl_y))
+                            if not isinstance(text_ctrl, widgets.CustomTextCtrl):
+                                ts = text_ctrl.GetChildren()
+                                t1: widgets.CustomTextCtrl = ts[0]
+                                t2: wx.StaticText = ts[1]
+                                t3: widgets.CustomTextCtrl = ts[2]
+                                child_w = (text_ctrl_w - self.indent * 2) // 2
+                                # 设置下限
+                                t1.SetSize(child_w, text_ctrl_h)
+                                t1.SetFont(font_temp)
+                                t1.SetPosition((0, 0))
+                                # “~”符号
+                                t2.SetFont(font_temp)
+                                label_w, label_h = t2.GetSize()
+                                t2.SetPosition((child_w + (label_w // 2), (text_ctrl_h - label_h) // 2))
+                                # 设置上限
+                                t3.SetSize(child_w, text_ctrl_h)
+                                t3.SetFont(font_temp)
+                                t3.SetPosition((child_w + self.indent * 2, 0))
+
+            def add_bolt_detail_widget(self, parent, title, data):
+                json_obj = {
+                    "title": wx.StaticText(parent, label = title)
+                }
+                if isinstance(data, tuple):
+                    panel_temp = wx.Panel(parent, wx.ID_ANY)
+                    json_obj["text_control"] = panel_temp
+                    widgets.CustomTextCtrl(panel_temp, value = str(data[0]),
+                                           style = wx.TE_READONLY,
+                                           background_color = configs.COLOR_COMMON_WHITE)
+                    wx.StaticText(panel_temp, label = "~")
+                    widgets.CustomTextCtrl(panel_temp, value = str(data[1]),
+                                           style = wx.TE_READONLY,
+                                           background_color = configs.COLOR_COMMON_WHITE)
+                else:
+                    json_obj["text_control"] = widgets.CustomTextCtrl(parent, value = str(data),
+                                                                      style = wx.TE_READONLY,
+                                                                      background_color = configs.COLOR_COMMON_WHITE)
+                self.detail_widgets.append(json_obj)
+
+            def calc_panel_size(self, content_size, len_of_lines):
+                c_w, c_h = content_size
+                return c_w, c_h // len_of_lines
+
+            def calc_panel_pos(self, panel_h, index):
+                return 0, panel_h * index
+
+
 
 # 右侧上方的工作状态panel
 class RightTopPanel(widgets.CustomBorderPanel):

@@ -1,13 +1,13 @@
 from enums.Command_Type_Enum import CommandTypeEnum
 from enums.Operation_Enum import OperationEnum
 from models.Command import Command
-from models.base import ToolBaseEntity
+from models.base import ToolBase
 
 
-class AtlasPfOpEntity(ToolBaseEntity):
+class AtlasPfOpEntity(ToolBase):
 
     def __init__(self):
-        ToolBaseEntity.__init__(self)
+        ToolBase.__init__(self)
 
         # 设定自己的个性化 extra 类型
         self.SWITCH_PSET = "1"

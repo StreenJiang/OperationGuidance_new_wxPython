@@ -1,34 +1,25 @@
 from abc import ABC, abstractmethod
+from typing import Dict
 
 import utils.CommonUtils as CommonUtils
 
 
-class ToolBaseEntity(ABC):
+class ToolBase(ABC):
+    def __init__(self, brand_name: str = "", operation_commands: Dict[str, str] = None):
+        self.__brand_name = brand_name
+        self.__operation_commands = operation_commands
 
-    def __init__(self):
-        self.__operation_commands = None
-        self.__variables = None
-
-    # --------------------
-    # 初始化命令清单
-    # --------------------
-    @abstractmethod
-    def initialize_commands(self):
-        pass
-
-    # --------------------
-    # 初始化参数
-    # --------------------
-    @abstractmethod
-    def initialize_variables(self, ip, port):
-        pass
+    def initiate(self, brand_name: str, operation_commands: Dict[str, str]):
+        self.SetBrandName(brand_name)
+        self.SetOperationCommands(operation_commands)
+        return self
 
     # --------------------
     # 根据命令CODE获取命令报文
     # --------------------
     def get_command_by_code(self, command_code):
-        if self.operation_commands is not None and command_code in self.operation_commands.keys():
-            return self.operation_commands[command_code]
+        if self.__operation_commands is not None and command_code in self.__operation_commands.keys():
+            return self.__operation_commands[command_code]
         return None
 
     # --------------------
@@ -38,21 +29,16 @@ class ToolBaseEntity(ABC):
     def get_command_extra(self, extra_type, *arg):
         pass
 
-    @property
-    def operation_commands(self):
-        return self.__operation_commands
-
-    @operation_commands.setter
-    def operation_commands(self, operation_commands):
+    def SetBrandName(self, brand_name: str):
+        self.__brand_name = brand_name
+    def SetOperationCommands(self, operation_commands: Dict[str, str]):
         self.__operation_commands = operation_commands
 
-    @property
-    def variables(self):
-        return self.__variables
+    def GetBrandName(self) -> str:
+        return self.__brand_name
+    def GetOperationCommands(self) -> Dict[str, str]:
+        return self.__operation_commands
 
-    @variables.setter
-    def variables(self, variables):
-        self.__variables = variables
 
 
 # 所有数据实体的父类

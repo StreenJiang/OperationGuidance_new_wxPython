@@ -1,29 +1,37 @@
+import wx
 import binascii
 import threading
 import socket
 import time
+from typing import List
 
+import utils.CommonUtils as CommonUtils
 from enums.Command_Type_Enum import CommandTypeEnum
 from enums.Notice_Enum import NoticeEnum
 from enums.Operation_Enum import OperationEnum
 from models.Command import Command
-import utils.CommonUtils as CommonUtils
+from models.base import ToolBase
 
 
 # --------------------
 # 工具线程类
 # --------------------
 class ToolThread(threading.Thread):
-    def __init__(self, window, entity_class, ip, port):
+    def __init__(self,
+                 window: wx.Window,
+                 entity: ToolBase,
+                 ip: str,
+                 port: int):
         threading.Thread.__init__(self)
         self.window = window
-
-        # 实例化实体对象
-        self.entity = entity_class()
+        self.entity = entity
+        self.socket = None
+        self.connected = False
+        self.working = False
+        self.commands_queue = []
 
         # 初始化数据
-        self.entity.initialize_commands()
-        self.entity.initialize_variables(ip, int(port))
+        self.entity.initialize_variables(ip, port)
 
         # 设置socket超时时间
         self.timeout = self.entity.variables["timeout"]
@@ -37,9 +45,10 @@ class ToolThread(threading.Thread):
     # --------------------
     # 组装命令并塞入命令队列中等待命令发送
     # --------------------
-    def command(self, commands):
+    def add_command_into_queue(self, commands):
         for command in commands:
-            self.entity.variables['commands'].append(command)
+            # self.entity.variables['commands'].append(command)
+            self.commands_queue.append(command)
 
 
     # --------------------
@@ -102,6 +111,8 @@ class ToolThread(threading.Thread):
             self.entity.variables["socket"].connect((ip, port))
 
             self.entity.variables["connected"] = True
+            self.working = True
+            self.connected = True
             NoticeEnum.Log(self, NoticeEnum.NETWORK_CONNECTED)
         # 连接socket server失败
         except Exception as e:
@@ -155,7 +166,7 @@ class ToolThread(threading.Thread):
             send_times = command.send_times + 1
 
             midNo = command.operation
-            command_msg = command.command
+            command_msg = command.add_command_into_queue
 
             if command.extra is not None:
                 command_msg = command_msg % command.extra

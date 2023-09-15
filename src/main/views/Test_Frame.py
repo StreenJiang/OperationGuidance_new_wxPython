@@ -22,7 +22,7 @@ import wx
 from enums.Command_Type_Enum import CommandTypeEnum
 from enums.Operation_Enum import OperationEnum
 from models.Command import Command
-from models.SudongEntity import SudongEntity
+from models.ToolSudong import ToolSudong
 from threads.ToolThread import ToolThread
 
 # ******************************
@@ -202,7 +202,7 @@ class MainProgram(wx.Frame):
 
         # 创建线程对象并启动线程
         if self.thread["tool"] is None:
-            self.thread["tool"] = ToolThread(self, SudongEntity, ip, port)
+            self.thread["tool"] = ToolThread(self, ToolSudong, ip, port)
             self.thread["tool"].start()
 
     # ------------------------------

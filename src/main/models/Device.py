@@ -1,5 +1,10 @@
+import wx
+from typing import Type
+
 from models.base import BaseEntity
 from utils import CommonUtils
+from threads import ToolThread as toolThread
+from models.base import ToolBase
 
 # 设备类别
 DEVICE_CATEGORY_TOOL = {
@@ -32,20 +37,19 @@ DEVICE_STATUS_DISCONNECTED = {
 }
 
 
-
-
 # 设备实体
 class Device(BaseEntity):
     def __init__(self,
                  id,
+                 creator,
+                 last_updater,
                  device_name: str,
                  device_category: int,
                  device_type: str,
                  device_ip: str,
                  device_port: int,
-                 device_status: int,
-                 creator,
-                 last_updater,
+                 device_status: dict,
+                 device_brand: ToolBase = None,
                  create_time = CommonUtils.System_Current_Datetime(),
                  last_update_time = CommonUtils.System_Current_Datetime(),
                  is_deleted = False):
@@ -57,6 +61,8 @@ class Device(BaseEntity):
         self.__device_ip            = device_ip         # 设备ip
         self.__device_port          = device_port       # 设备端口
         self.__device_status        = device_status     # 设备状态
+        self.__device_brand         = device_brand      # 设备所属品牌
+        self.__device_thread        = None              # 设备连接的线程
 
     def SetId(self, id: int):
         self.__id = id
@@ -70,8 +76,10 @@ class Device(BaseEntity):
         self.__device_ip = device_ip
     def SetDevicePort(self, device_port: int):
         self.__device_port = device_port
-    def SetDeviceStatus(self, device_status: int):
+    def SetDeviceStatus(self, device_status: dict):
         self.__device_status = device_status
+    def SetDeviceBrand(self, device_brand: ToolBase):
+        self.__device_brand = device_brand
 
     def GetId(self) -> int:
         return self.__id
@@ -85,8 +93,20 @@ class Device(BaseEntity):
         return self.__device_ip
     def GetDevicePort(self) -> int:
         return self.__device_port
-    def GetDeviceStatus(self) -> int:
+    def GetDeviceStatus(self) -> dict:
         return self.__device_status
+    def GetDeviceBrand(self) -> ToolBase:
+        return self.__device_brand
+    def GetDeviceThread(self) -> toolThread.ToolThread:
+        return self.__device_thread
+
+    def setup_thread(self, window: wx.Window):
+        if self.__device_thread is None:
+            self.__device_thread = toolThread.ToolThread(window,
+                                                         self.__device_brand,
+                                                         self.__device_ip,
+                                                         self.__device_port),
+        return self
 
 
 
